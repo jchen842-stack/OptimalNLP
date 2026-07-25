@@ -1,0 +1,26 @@
+# CPU-only pod for code reading + synthetic frontier experiment (no GPU held).
+# Mounts the same optimalce-data PVC (RWO). Swap to pod.yaml if real activations are needed.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: optimalce-cpu
+spec:
+  restartPolicy: Never
+  containers:
+  - name: main
+    image: nvcr.io/nvidia/pytorch:23.01-py3
+    command: ["sleep", "infinity"]
+    resources:
+      limits:
+        memory: 24Gi
+        cpu: "8"
+      requests:
+        memory: 16Gi
+        cpu: "4"
+    volumeMounts:
+    - name: data
+      mountPath: /workspace/data
+  volumes:
+  - name: data
+    persistentVolumeClaim:
+      claimName: optimalce-data

@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.DS_Store
+*.log
+# large data / caches never belong in this repo (they live on the PVC)
+datasets/
+data/
+*.npz
+*.pkl

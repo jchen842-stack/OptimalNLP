@@ -1,0 +1,12 @@
+# Persistent storage: repo + Cityscapes (~11GB) + models + activation cache.
+# The activation cache is why this must persist — regenerating it is the slow part.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: optimalce-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 80Gi
+  storageClassName: rook-ceph-block

@@ -1,0 +1,48 @@
+diff --git a/compositional/optimal.py b/compositional/optimal.py
+index 51c9b26..ac43b8e 100755
+--- a/compositional/optimal.py
++++ b/compositional/optimal.py
+@@ -409,6 +409,25 @@ def estimate_iou_frontier(
+     return frontier_estimates, minimum_threshold
+ 
+ 
++# Size-bounded beam fallback (paper Sec 3.3 escape hatch). None => disabled, i.e. exact
++# optimal search with an unbounded frontier. Set to an int N to cap the frontier at N nodes:
++# under token-like concept overlap the admissible ceilings stop separating candidates, so the
++# frontier grows unbounded (OOM). Keeping only the top-N nodes by ceiling bounds memory and
++# time, trading exactness for tractability (the search degrades gracefully toward beam).
++MAX_FRONTIER_SIZE = None
++
++
++def _apply_beam_cap(frontier):
++    """If MAX_FRONTIER_SIZE is set and the frontier exceeds it, keep only the top-N nodes by
++    ceiling (highest estimated IoU == smallest -iou) and re-heapify. Selection uses only the
++    ceiling key so it never depends on tie-breaking the rest of the node tuple."""
++    if MAX_FRONTIER_SIZE is None or len(frontier) <= MAX_FRONTIER_SIZE:
++        return frontier
++    kept = heapq.nsmallest(MAX_FRONTIER_SIZE, frontier, key=lambda node: node[0])
++    heapq.heapify(kept)
++    return kept
++
++
+ def reduce_frontier(frontier, threshold):
+     """Remove nodes from the frontier that have an estimated IoU lower than the global minimum threshold.
+ 
+@@ -425,7 +444,7 @@ def reduce_frontier(frontier, threshold):
+         if -iou >= threshold:
+             reduced_frontier.append(node)
+     heapq.heapify(reduced_frontier)
+-    return reduced_frontier
++    return _apply_beam_cap(reduced_frontier)
+ 
+ 
+ def update_frontier(
+@@ -493,6 +512,8 @@ def update_frontier(
+         # Initialize frontier as a queue
+         heapq.heapify(new_frontier)
+         sorted_frontier = new_frontier
++    # Enforce the beam cap after growth (no-op when MAX_FRONTIER_SIZE is None).
++    sorted_frontier = _apply_beam_cap(sorted_frontier)
+     return sorted_frontier, global_min_threshold
+ 
+ 
