@@ -143,11 +143,28 @@ def main():
         ap.error("pass --untrained for the random-weights control, or --ckpt PATH for a trained model")
 
     sents = rtm.load_sentences(args.feats, args.max_sents)
-    stoi = build_vocab(sents)
+
+    if args.ckpt is not None:
+        # The embedding table is indexed by the TRAINING vocabulary. Rebuilding a vocabulary
+        # from the annotation corpus here would map every token to the wrong embedding row and
+        # fail silently — plausible-looking activations with no relationship to the model.
+        import torch
+        _ck = torch.load(args.ckpt, map_location="cpu")
+        stoi = _ck["stoi"]
+        hidden_dim = _ck.get("hidden_dim", args.hidden_dim)
+        embedding_dim = _ck.get("embedding_dim", args.embedding_dim)
+        oov = sum(1 for s in sents for text, _ in s if text not in stoi)
+        n_tok = sum(len(s) for s in sents)
+        print(f"[acts] using checkpoint vocab ({len(stoi)} types) | "
+              f"OOV {oov}/{n_tok} ({oov/max(n_tok,1):.1%}) -> UNK")
+    else:
+        stoi = build_vocab(sents)
+        hidden_dim, embedding_dim = args.hidden_dim, args.embedding_dim
+
     print(f"[acts] {len(sents)} sentences | {sum(len(s) for s in sents)} tokens | "
           f"vocab {len(stoi)} | {'UNTRAINED (random weights)' if args.untrained else args.ckpt}")
 
-    states = extract_states(sents, stoi, args.hidden_dim, args.embedding_dim,
+    states = extract_states(sents, stoi, hidden_dim, embedding_dim,
                             args.seed, ckpt=args.ckpt)
     n_tokens = verify_alignment(sents, states)
     print(f"[acts] states {states.shape} — aligned to {n_tokens} mask tokens")
