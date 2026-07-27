@@ -36,13 +36,18 @@ CATEGORIES = ["lemma", "tag", "dep", "ent", "synset", "const"]
 MULTI = {"const"}  # ";"-separated, a token may belong to several at once
 
 
-def load_tokens(path, max_sents=None):
-    """Parse the .feats file into a flat list of per-token {category: [values]} dicts.
+def load_sentences(path, max_sents=None):
+    """Parse the .feats file into a list of sentences, each a list of (text, feats) pairs.
 
     The header line is skipped. Empty fields contribute no concept (an absent entity tag
     is not the concept "no entity"), which keeps `uncoverable` meaningful downstream.
+
+    Sentence structure is preserved here because the activation extractor
+    (`real_activations.py`) has to run the model sentence by sentence and then flatten
+    back to the same token order these masks use. Both sides call this one parser so the
+    two axes cannot drift apart; `real_activations.verify_alignment` asserts it.
     """
-    tokens = []
+    sents = []
     with open(path, encoding="utf-8") as f:
         next(f)  # header
         for i, line in enumerate(f):
@@ -51,6 +56,7 @@ def load_tokens(path, max_sents=None):
             line = line.strip()
             if not line:
                 continue
+            sent = []
             for tok in line.split(" "):
                 parts = tok.split("|")
                 if len(parts) != len(CATEGORIES) + 1:
@@ -60,8 +66,14 @@ def load_tokens(path, max_sents=None):
                     if not val:
                         continue
                     feats[cat] = val.split(";") if cat in MULTI else [val]
-                tokens.append(feats)
-    return tokens
+                sent.append((parts[0], feats))
+            sents.append(sent)
+    return sents
+
+
+def load_tokens(path, max_sents=None):
+    """Flat list of per-token {category: [values]} dicts, in reading order."""
+    return [feats for sent in load_sentences(path, max_sents) for _, feats in sent]
 
 
 def select_concepts(tokens, categories, K, min_support):

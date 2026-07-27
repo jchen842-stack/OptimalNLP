@@ -54,6 +54,22 @@ ARMS = {
 }
 
 
+def load_real_neurons(path, n_units, rng, dmin=0.15, dmax=0.85):
+    """Pick `n_units` real unit masks from a `real_activations.py` dump.
+
+    Units are filtered to a sensible density band — a unit that fires on ~everything or
+    ~nothing has a degenerate optimum and would measure thresholding, not search behaviour.
+    Selection is seeded so runs are reproducible.
+    """
+    z = np.load(path)
+    acts, density = z["acts"], z["density"]
+    eligible = np.where((density >= dmin) & (density <= dmax))[0]
+    if len(eligible) == 0:
+        raise SystemExit(f"no units in density band [{dmin}, {dmax}] in {path}")
+    pick = rng.choice(eligible, size=min(n_units, len(eligible)), replace=False)
+    return [(int(u), acts[u].astype(bool)) for u in sorted(pick)], bool(z["untrained"])
+
+
 def make_proxy_neuron(dense, rng, noise, n_target=3):
     """Proxy neuron: OR of three real concepts + label noise.
 
@@ -132,6 +148,10 @@ def main():
     ap.add_argument("--time_budget", type=float, default=60.0)
     ap.add_argument("--noise", type=float, default=0.05)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--neuron", choices=["proxy", "real"], default="proxy",
+                    help="proxy = OR of 3 concepts + noise; real = units from real_activations.py")
+    ap.add_argument("--acts", default="results/real_activations.npz")
+    ap.add_argument("--units", type=int, default=5, help="how many real units to run")
     ap.add_argument("--out", default="results/real_token_search.csv")
     args = ap.parse_args()
 
@@ -145,25 +165,41 @@ def main():
         concepts = rtm.select_concepts(tokens, cats, args.K, args.min_support)
         dense = rtm.build_dense(tokens, concepts)
         diag = rtm.diagnostics(dense)
-        neuron_bits, target_ks = make_proxy_neuron(
-            dense, np.random.default_rng(args.seed + 999), args.noise)
+        if args.neuron == "proxy":
+            bits, target_ks = make_proxy_neuron(
+                dense, np.random.default_rng(args.seed + 999), args.noise)
+            neurons = [("proxy", bits)]
+            label = f"OR{[f'{concepts[k][0]}={concepts[k][1]}' for k in target_ks]}"
+        else:
+            picked, untrained = load_real_neurons(
+                args.acts, args.units, np.random.default_rng(args.seed + 999))
+            if len(picked[0][1]) != len(tokens):
+                raise SystemExit(
+                    f"activation/mask token mismatch: {len(picked[0][1])} vs {len(tokens)} "
+                    "-- regenerate the .npz with the same --max_sents")
+            neurons = [(f"unit{u}", b) for u, b in picked]
+            label = f"{len(neurons)} real units ({'untrained' if untrained else 'trained'})"
+
         print(f"=== {name} === overlap={diag['mean_overlap']} "
               f"common_frac={diag['common_frac']} disjoint_pairs={diag['disjoint_pairs']} "
-              f"| neuron=OR{[f'{concepts[k][0]}={concepts[k][1]}' for k in target_ks]} "
-              f"hits={int(neuron_bits.sum())}\n", flush=True)
+              f"| neuron={label}\n", flush=True)
 
-        for length in args.lengths:
-            for bw in args.beam_list:
-                beam_cap = None if str(bw).lower() == "none" else int(bw)
-                print(f"--- {arm} length={length} beam={bw} ---", flush=True)
-                res = run_one(dense, neuron_bits, length, args.cap,
-                              args.time_budget, beam_cap)
-                row = {"arm": name, "categories": "+".join(cats), "length": length,
-                       "beam": bw, "mean_overlap": diag["mean_overlap"],
-                       "common_frac": diag["common_frac"],
-                       "disjoint_pairs": diag["disjoint_pairs"], **res}
-                rows.append(row)
-                print(row, "\n", flush=True)
+        for nid, neuron_bits in neurons:
+            for length in args.lengths:
+                for bw in args.beam_list:
+                    beam_cap = None if str(bw).lower() == "none" else int(bw)
+                    print(f"--- {arm} {nid} length={length} beam={bw} "
+                          f"density={neuron_bits.mean():.3f} ---", flush=True)
+                    res = run_one(dense, neuron_bits, length, args.cap,
+                                  args.time_budget, beam_cap)
+                    row = {"arm": name, "categories": "+".join(cats), "neuron": nid,
+                           "density": round(float(neuron_bits.mean()), 3),
+                           "length": length, "beam": bw,
+                           "mean_overlap": diag["mean_overlap"],
+                           "common_frac": diag["common_frac"],
+                           "disjoint_pairs": diag["disjoint_pairs"], **res}
+                    rows.append(row)
+                    print(row, "\n", flush=True)
 
     with open(args.out, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
@@ -171,7 +207,7 @@ def main():
         w.writerows(rows)
     print(f"wrote {args.out}")
 
-    cols = ["arm", "length", "beam", "mean_overlap", "disjoint_pairs",
+    cols = ["arm", "neuron", "density", "length", "beam", "mean_overlap", "disjoint_pairs",
             "peak_frontier", "visited", "best_iou", "time_s", "halted"]
     print("\n=== SUMMARY ===")
     print(" ".join(f"{c:>14}" for c in cols))

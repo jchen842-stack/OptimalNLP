@@ -25,10 +25,12 @@ lives here and can be re-applied to any fresh checkout:
 src/synthetic_overlap_sweep.py   synthetic harness (overlap / scale / beam modes)
 src/real_token_masks.py          real SNLI token concept masks + overlap statistics
 src/real_token_search.py         optimal search on real token masks (wall + beam fix)
+src/real_activations.py          real per-token unit activations (Bowman encoder)
 patches/0001-frontier-beam-fallback.patch   the fix, vs upstream 70805299
 results/*.csv                    recorded experiment outputs
 diary/summer_d5.md               research diary (synthetic reproduction + fix)
 diary/summer_d5.1.md             research diary (real SNLI token masks; revises D5)
+diary/summer_d5.2.md             research diary (real neuron activations; revises D5.1)
 infra/{pvc,pod,pod-cpu}.yaml      Nautilus manifests
 scripts/setup_pod.sh             clone upstream + apply patch + sync harness into a pod
 UPSTREAM                         pinned upstream commit
@@ -71,10 +73,13 @@ So the regime shift is a property of NLP annotation, not of our generator.
    4.20 (K=50), against 2.863 for synthetic `p_add=1`, with tokens in up to 7 concepts at once.
 3. **But real overlap is block-structured, and that matters.** Concepts within a category are
    mutually exclusive, so ~half the concept pairs stay disjoint (110/210 at K=15) where the
-   synthetic generator drove disjoint pairs to 0. The disjoint fast-path partially survives,
-   and at K=15/length=4 the real search *terminates* in 6.5 s where synthetic predicted a
-   timeout. **Uniform random overlap overstates the severity** — a correction to the synthetic
-   section, not a confirmation of it.
+   synthetic generator drove disjoint pairs to 0, so the disjoint fast-path partially survives.
+   ⚠️ **Partly superseded by D5.2.** This point originally continued: "and at K=15/length=4 the
+   real search terminates in 6.5 s where synthetic predicted a timeout." That held only for the
+   *proxy* neuron. With real unit activations the same case runs 14 s → non-termination
+   (1 of 5 units), so the tractability gain was substantially the easy target, not the block
+   structure. The block structure is real; its share of the effect was overstated. See
+   [`diary/summer_d5.2.md`](diary/summer_d5.2.md).
 4. **The wall is nonetheless real**, and it arrives on the K axis (`results/real_K{30,50}.csv`):
 
    | K (all categories, length 4) | peak frontier | time | terminates |
@@ -102,15 +107,15 @@ So the regime shift is a property of NLP annotation, not of our generator.
 
 ### Scope and caveats
 
-- **The neuron is a proxy** — an OR of three real concepts plus 5% label noise. The concept
-  masks are real, which is what the frontier explosion depends on (the combinatorics live on
-  the concept side), but these are *not* explanations of real trained neurons. Real
-  activations are a separate step: the NLI path uses a Bowman SNLI entailment classifier
-  (`settings.MODEL = models/bowman_snli/6.pth`, `BowmanEntailmentClassifier` in `models.py`),
-  trained locally by `nli/code/snli_train.py` — **no external download**. `analyze.py` then
-  supplies the swap directly: `extract_features()` collects per-token hidden states and
-  `quantile_features()` thresholds each unit into a boolean mask over the same token axis,
-  which is exactly the `bitmaps` slot the proxy fills here.
+- **Neurons: proxy, and real-but-untrained.** Results 1–5 above use a *proxy* neuron (OR of
+  three concepts + 5% noise). D5.2 adds **real per-token unit activations** via
+  `src/real_activations.py`, which builds the encoder directly and reads
+  `TextEncoder.get_states()` — the upstream `load_for_analysis` cannot be used here (it needs a
+  checkpoint for weights *and* vocab) and upstream NLI neurons live on the *example* axis, not
+  the token axis. Real units make the K=15/length=4 case 6.1× the frontier and 22.5× the time,
+  with 1 of 5 timing out. Those units are **untrained**, which is plausibly the hardest case,
+  so proxy and untrained bracket the answer rather than settle it — trained units (A3) are the
+  open step.
   (The OpenNMT en-de BiLSTM in `nli/models/README.md` belongs to the MT half of that
   codebase and is *not* used by the NLI path.)
 - **Closed-class controls saturate.** `tag`/`dep` cap out at ~23 concepts meeting
