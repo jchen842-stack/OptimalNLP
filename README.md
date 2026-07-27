@@ -27,7 +27,8 @@ src/real_token_masks.py          real SNLI token concept masks + overlap statist
 src/real_token_search.py         optimal search on real token masks (wall + beam fix)
 patches/0001-frontier-beam-fallback.patch   the fix, vs upstream 70805299
 results/*.csv                    recorded experiment outputs
-diary/summer_d5.md               research diary for this session
+diary/summer_d5.md               research diary (synthetic reproduction + fix)
+diary/summer_d5.1.md             research diary (real SNLI token masks; revises D5)
 infra/{pvc,pod,pod-cpu}.yaml      Nautilus manifests
 scripts/setup_pod.sh             clone upstream + apply patch + sync harness into a pod
 UPSTREAM                         pinned upstream commit
