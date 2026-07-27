@@ -26,11 +26,13 @@ src/synthetic_overlap_sweep.py   synthetic harness (overlap / scale / beam modes
 src/real_token_masks.py          real SNLI token concept masks + overlap statistics
 src/real_token_search.py         optimal search on real token masks (wall + beam fix)
 src/real_activations.py          real per-token unit activations (Bowman encoder)
+src/train_snli_encoder.py        train the Bowman SNLI classifier (0.7934 dev)
 patches/0001-frontier-beam-fallback.patch   the fix, vs upstream 70805299
 results/*.csv                    recorded experiment outputs
 diary/summer_d5.md               research diary (synthetic reproduction + fix)
 diary/summer_d5.1.md             research diary (real SNLI token masks; revises D5)
 diary/summer_d5.2.md             research diary (real neuron activations; revises D5.1)
+diary/summer_d5.3.md             research diary (trained neurons; revises D5.2)
 infra/{pvc,pod,pod-cpu}.yaml      Nautilus manifests
 scripts/setup_pod.sh             clone upstream + apply patch + sync harness into a pod
 UPSTREAM                         pinned upstream commit
@@ -107,15 +109,31 @@ So the regime shift is a property of NLP annotation, not of our generator.
 
 ### Scope and caveats
 
-- **Neurons: proxy, and real-but-untrained.** Results 1–5 above use a *proxy* neuron (OR of
-  three concepts + 5% noise). D5.2 adds **real per-token unit activations** via
+- **Neurons: proxy, untrained, and trained.** Results 1–5 above use a *proxy* neuron (OR of
+  three concepts + 5% noise). D5.2 added **real per-token unit activations** via
   `src/real_activations.py`, which builds the encoder directly and reads
   `TextEncoder.get_states()` — the upstream `load_for_analysis` cannot be used here (it needs a
   checkpoint for weights *and* vocab) and upstream NLI neurons live on the *example* axis, not
-  the token axis. Real units make the K=15/length=4 case 6.1× the frontier and 22.5× the time,
-  with 1 of 5 timing out. Those units are **untrained**, which is plausibly the hardest case,
-  so proxy and untrained bracket the answer rather than settle it — trained units (A3) are the
-  open step.
+  the token axis. D5.3 then trained a Bowman SNLI classifier to **0.7934** dev accuracy
+  (`src/train_snli_encoder.py`) and reran with trained units. At K=15/length=4:
+
+  | neuron | frontier (med) | time (med) | best IoU (med) | timeouts |
+  |---|---|---|---|---|
+  | proxy | 3,085 | 6.5 s | 0.905 | 0/1 |
+  | untrained | 18,760 | 145.6 s | 0.611 | 1/5 |
+  | trained (density-matched) | 15,491 | 86.5 s | 0.530 | 0/5 |
+
+  **Trained neurons land next to untrained, not next to the proxy** — the proxy is a 5×
+  frontier / 13× time outlier against a properly trained model. That gap is an order of
+  magnitude larger than the noise and is the robust finding here.
+  **The trained-vs-untrained difference is not established.** At n=5 per arm neither the 17%
+  frontier gap nor the search-IoU gap (0.530 vs 0.611) survives scrutiny: the untrained arm has
+  one censored timeout, which biases its IoU mean upward, and a density-matched test over all
+  600 eligible units *reverses* the IoU sign (trained 0.431 vs untrained 0.420, p=0.008,
+  d=0.20 — a small effect the other way). Also robust: **both** arms sit near IoU 0.4–0.6, so
+  real neurons of either kind are poorly described by this concept vocabulary, which points at
+  the vocabulary rather than the search as the binding constraint. See
+  [`diary/summer_d5.3.md`](diary/summer_d5.3.md) §4.
   (The OpenNMT en-de BiLSTM in `nli/models/README.md` belongs to the MT half of that
   codebase and is *not* used by the NLI path.)
 - **Closed-class controls saturate.** `tag`/`dep` cap out at ~23 concepts meeting

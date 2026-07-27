@@ -152,6 +152,8 @@ def main():
                     help="proxy = OR of 3 concepts + noise; real = units from real_activations.py")
     ap.add_argument("--acts", default="results/real_activations.npz")
     ap.add_argument("--units", type=int, default=5, help="how many real units to run")
+    ap.add_argument("--dmin", type=float, default=0.15, help="min unit density to consider")
+    ap.add_argument("--dmax", type=float, default=0.85, help="max unit density to consider")
     ap.add_argument("--out", default="results/real_token_search.csv")
     args = ap.parse_args()
 
@@ -172,7 +174,8 @@ def main():
             label = f"OR{[f'{concepts[k][0]}={concepts[k][1]}' for k in target_ks]}"
         else:
             picked, untrained = load_real_neurons(
-                args.acts, args.units, np.random.default_rng(args.seed + 999))
+                args.acts, args.units, np.random.default_rng(args.seed + 999),
+                dmin=args.dmin, dmax=args.dmax)
             if len(picked[0][1]) != len(tokens):
                 raise SystemExit(
                     f"activation/mask token mismatch: {len(picked[0][1])} vs {len(tokens)} "

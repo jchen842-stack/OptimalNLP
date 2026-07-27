@@ -1,0 +1,6 @@
+arm,categories,neuron,density,length,beam,mean_overlap,common_frac,disjoint_pairs,peak_frontier,halted,visited,expanded,estimated,best_iou,time_s
+all categories (token regime),lemma+tag+dep+ent+synset+const,unit91,0.327,4,none,3.178,0.814,110,15917,no,5076,7748,72232,0.3925,89.43
+all categories (token regime),lemma+tag+dep+ent+synset+const,unit92,0.753,4,none,3.178,0.814,110,15749,no,2545,6177,57210,0.7394,17.64
+all categories (token regime),lemma+tag+dep+ent+synset+const,unit95,0.709,4,none,3.178,0.814,110,9404,no,6268,6182,57324,0.6982,96.88
+all categories (token regime),lemma+tag+dep+ent+synset+const,unit395,0.171,4,none,3.178,0.814,110,10290,no,6161,6526,63232,0.3972,92.65
+all categories (token regime),lemma+tag+dep+ent+synset+const,unit413,0.255,4,none,3.178,0.814,110,8403,no,2447,5518,52419,0.4447,25.05
