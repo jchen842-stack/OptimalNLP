@@ -22,7 +22,9 @@ lives here and can be re-applied to any fresh checkout:
 ## Layout
 
 ```
-src/synthetic_overlap_sweep.py   experiment harness (overlap / scale / beam modes)
+src/synthetic_overlap_sweep.py   synthetic harness (overlap / scale / beam modes)
+src/real_token_masks.py          real SNLI token concept masks + overlap statistics
+src/real_token_search.py         optimal search on real token masks (wall + beam fix)
 patches/0001-frontier-beam-fallback.patch   the fix, vs upstream 70805299
 results/*.csv                    recorded experiment outputs
 diary/summer_d5.md               research diary for this session
@@ -41,6 +43,79 @@ in `compositional/optimal.py`). Key finding: a size cap bounds *memory* but the 
 *tight* to also bound *time* — a wide cap (2000) still times out, while beam 100–500 turns a
 non-terminating OOM search into 1.4–30 s with a usable explanation. See
 [`diary/summer_d5.md`](diary/summer_d5.md) for the full write-up and tables.
+
+## Real SNLI token data
+
+The synthetic sweep turned overlap with a knob. This section removes the knob: the masks are
+real spaCy/benepar/WordNet annotations of SNLI dev tokens (`snli_1.0_dev.feats`, pre-computed
+and checked into the Compositional Explanations of Neurons NLI codebase, so no spaCy, benepar,
+GPU, or model checkpoint is needed).
+
+**The controlled contrast comes free with the data.** Only the admitted concept *vocabulary*
+changes; the token set is identical in every arm:
+
+- single-valued categories (`tag`, `dep`, `lemma` alone) are **disjoint by construction** — a
+  token has exactly one POS tag, one dep label, one lemma;
+- all categories at once is **overlapping by construction** — a token simultaneously has a
+  lemma AND a tag AND a dep AND a synset AND several constituents.
+
+So the regime shift is a property of NLP annotation, not of our generator.
+
+### Findings
+
+1. **The disjoint arms reproduce the synthetic control exactly** — `mean_overlap` 1.0,
+   `common_frac` 0.0, every concept pair disjoint, and a flat, cheap search at every size.
+   This validates the synthetic generator against real masks.
+2. **Real overlap is *worse* than the synthetic worst case**: `mean_overlap` 3.18 (K=15) to
+   4.20 (K=50), against 2.863 for synthetic `p_add=1`, with tokens in up to 7 concepts at once.
+3. **But real overlap is block-structured, and that matters.** Concepts within a category are
+   mutually exclusive, so ~half the concept pairs stay disjoint (110/210 at K=15) where the
+   synthetic generator drove disjoint pairs to 0. The disjoint fast-path partially survives,
+   and at K=15/length=4 the real search *terminates* in 6.5 s where synthetic predicted a
+   timeout. **Uniform random overlap overstates the severity** — a correction to the synthetic
+   section, not a confirmation of it.
+4. **The wall is nonetheless real**, and it arrives on the K axis (`results/real_K{30,50}.csv`):
+
+   | K (all categories, length 4) | peak frontier | time | terminates |
+   |---|---|---|---|
+   | 15 | 3,085 | 6.5 s | yes |
+   | 30 | 15,027 | 115.7 s | barely |
+   | 50 | 48,014 | 220 s | **no** |
+
+   Against a **K-matched** disjoint control (`lemma`-only, K=50, all 2450 pairs disjoint):
+   257 frontier, 2 nodes visited, 0.25 s. That is 187× the frontier, and the qualitative gap
+   is starker than any ratio — at identical K and length the disjoint search visits two nodes
+   and finishes, while the overlapping one never terminates.
+5. **The beam fallback rescues the real wall** (`results/real_beam_K50.csv`), and more cleanly
+   than on synthetic data — quality plateaus early instead of wobbling:
+
+   | beam | time | IoU | terminates |
+   |---|---|---|---|
+   | none | 220 s | — | no |
+   | 100 | 0.54 s | 0.6875 | yes |
+   | 200 | 2.3 s | 0.738 | yes |
+   | 500 | 9.0 s | 0.738 | yes |
+   | 1000 | 18.6 s | 0.7386 | yes |
+
+   Beam 200 buys full attainable IoU for 2.3 s against a search that otherwise never returns.
+
+### Scope and caveats
+
+- **The neuron is a proxy** — an OR of three real concepts plus 5% label noise. The concept
+  masks are real, which is what the frontier explosion depends on (the combinatorics live on
+  the concept side), but these are *not* explanations of real trained neurons. Real
+  activations need the encoder checkpoint from `nli/models/README.md` and are a separate step.
+- **Closed-class controls saturate.** `tag`/`dep` cap out at ~23 concepts meeting
+  `min_support`, so they cannot supply a K-matched control at K≥30; use the `lemma` arm there.
+  An earlier 649× figure compared K=50 overlap against a K=23 control and is superseded by the
+  187× K-matched number above.
+- 200 sentences (~2,547 tokens) were used to keep M near the synthetic M=2048.
+
+```bash
+python src/real_token_masks.py                      # overlap statistics, all arms
+python src/real_token_search.py --arms lemma all \
+    --lengths 4 --K 50 --beam_list none 200         # the wall and the fix
+```
 
 ## Reproduce (current or a new namespace)
 

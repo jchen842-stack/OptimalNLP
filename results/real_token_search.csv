@@ -1,0 +1,5 @@
+arm,categories,length,beam,mean_overlap,common_frac,disjoint_pairs,peak_frontier,halted,visited,expanded,estimated,best_iou,time_s
+tag-only (disjoint control),tag,3,none,1.0,0.0,210,34,no,2,14,99,0.7908,0.0
+tag-only (disjoint control),tag,4,none,1.0,0.0,210,58,no,2,69,488,0.7908,0.02
+all categories (token regime),lemma+tag+dep+ent+synset+const,3,none,3.178,0.814,110,336,no,12,184,2071,0.9049,0.07
+all categories (token regime),lemma+tag+dep+ent+synset+const,4,none,3.178,0.814,110,3085,no,505,3609,38109,0.9049,6.47

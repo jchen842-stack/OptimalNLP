@@ -1,0 +1,5 @@
+arm,categories,length,beam,mean_overlap,common_frac,disjoint_pairs,peak_frontier,halted,visited,expanded,estimated,best_iou,time_s
+all categories (token regime),lemma+tag+dep+ent+synset+const,4,100,4.204,0.977,1954,232,no,55,360,11725,0.6875,0.54
+all categories (token regime),lemma+tag+dep+ent+synset+const,4,200,4.204,0.977,1954,334,no,22,1349,46819,0.738,2.28
+all categories (token regime),lemma+tag+dep+ent+synset+const,4,500,4.204,0.977,1954,639,no,46,3474,122525,0.738,9.03
+all categories (token regime),lemma+tag+dep+ent+synset+const,4,1000,4.204,0.977,1954,1139,no,371,4938,168881,0.7386,18.62
