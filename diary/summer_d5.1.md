@@ -161,17 +161,29 @@ cross-arm comparable metrics; IoU is only comparable *within* an arm (e.g. down 
 ## 8. Scope
 
 - Concept masks are real; **the neuron is a proxy**. These are not explanations of real trained
-  neurons. Real activations need the OpenNMT en-de BiLSTM checkpoint named in
-  `nli/models/README.md` — an external download, not yet fetched.
+  neurons. Real activations need a trained SNLI model — see §9(A2); **no external download is
+  involved**, contrary to an earlier draft of this entry.
 - 200 sentences / 2 547 tokens, to hold M near D5's synthetic 2 048. Scaling M is untested.
 - Single seed. The regime gaps are orders of magnitude, so they are unlikely to be noise, but
   the beam-width IoU plateau in §6 deserves repetition across seeds before it is leaned on.
 
 ## 9. Next steps
 
-- **(A2) Real activations.** Fetch the encoder checkpoint, dump unit activations over the same
-  token axis, and replace the proxy neuron. This upgrades the claim from "real token concept
-  *structure* breaks the search" to "real neurons in a trained model do."
+- **(A2) Real activations.** Replace the proxy neuron with real unit activations over the same
+  token axis. This upgrades the claim from "real token concept *structure* breaks the search"
+  to "real neurons in a trained model do." **Cheaper than first assessed.** An earlier draft
+  said this required fetching the OpenNMT en-de BiLSTM from `nli/models/README.md`; that
+  checkpoint belongs to the **MT** half of that codebase and the NLI path never touches it.
+  `settings.py` points at `models/bowman_snli/6.pth` with `MODEL_TYPE = "bowman"` — a Bowman
+  SNLI entailment classifier (`BowmanEntailmentClassifier`, `models.py`) produced locally by
+  `snli_train.py`, which writes `{epoch}.pth`; the checked-in `preds/6_snli_1.0_dev.csv` is
+  that epoch-6 model's output. So the step is **train a small LSTM, not download anything**,
+  and it is CPU-feasible. The plumbing already lines up: `analyze.py:extract_features()`
+  collects per-token hidden states `(n_tokens, n_units)` and `quantile_features()` thresholds
+  each unit into a boolean mask over tokens — precisely the `bitmaps` array
+  `real_token_search.py` currently fills with the proxy, so the swap is one array plus a
+  training run. Our own task7 Bowman LSTM (0.775 dev) is the same architecture family and is
+  an alternative source of units.
 - **(B) Sharpen the fix.** Auto-select beam width from a time budget, or add a total-expansion
   budget guaranteeing termination regardless of width. The real-data plateau at 200 suggests
   width selection may be easier on real inputs than the synthetic sweep implied.

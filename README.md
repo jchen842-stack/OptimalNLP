@@ -105,7 +105,14 @@ So the regime shift is a property of NLP annotation, not of our generator.
 - **The neuron is a proxy** — an OR of three real concepts plus 5% label noise. The concept
   masks are real, which is what the frontier explosion depends on (the combinatorics live on
   the concept side), but these are *not* explanations of real trained neurons. Real
-  activations need the encoder checkpoint from `nli/models/README.md` and are a separate step.
+  activations are a separate step: the NLI path uses a Bowman SNLI entailment classifier
+  (`settings.MODEL = models/bowman_snli/6.pth`, `BowmanEntailmentClassifier` in `models.py`),
+  trained locally by `nli/code/snli_train.py` — **no external download**. `analyze.py` then
+  supplies the swap directly: `extract_features()` collects per-token hidden states and
+  `quantile_features()` thresholds each unit into a boolean mask over the same token axis,
+  which is exactly the `bitmaps` slot the proxy fills here.
+  (The OpenNMT en-de BiLSTM in `nli/models/README.md` belongs to the MT half of that
+  codebase and is *not* used by the NLI path.)
 - **Closed-class controls saturate.** `tag`/`dep` cap out at ~23 concepts meeting
   `min_support`, so they cannot supply a K-matched control at K≥30; use the `lemma` arm there.
   An earlier 649× figure compared K=50 overlap against a K=23 control and is superseded by the
