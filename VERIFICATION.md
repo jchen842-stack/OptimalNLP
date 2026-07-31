@@ -4,7 +4,40 @@ Adversarial audit of the alpha-sweep / Phase B pipeline. Every check re-computes
 quantity a **second, independent way** and compares, rather than re-reading the code that
 produced it. Scripts live in `verify/` and are re-runnable.
 
-Environment: `~/miniconda3/envs/compexp/bin/python`, run from the repo root.
+Environment: see `results/ENVIRONMENT.md`. Run from the repo root.
+
+## Verify it yourself
+
+```sh
+./verify/run_all.sh
+```
+
+Runs all ten checks and prints a summary table, exiting nonzero if anything failed. Checks
+needing a gitignored input report **CANNOT VERIFY** and name the file, rather than crashing.
+
+```
+=== SUMMARY ===
+CHECK                                      RESULT          NOTE
+------------------------------------------ --------------- ----
+1. alignment (token order)                 PASS
+2. padding                                 PASS
+3. patch no-op                             PASS
+4. IoU vs upstream metrics.iou             PASS
+5. masks vs raw .feats                     PASS
+6a. vision stubs untouched (runtime)       PASS
+6b. vision stubs untouched (call trace)    PASS
+7. model reproduces                        PASS
+8. binarisation is per-unit                PASS
+9. brute-force oracle (length 3)           PASS
+
+passed: 10/10   failed: 0   cannot verify: 0
+AUDIT PASSED
+```
+
+From a clean clone with no checkpoint and no activations it degrades rather than failing —
+3 PASS, 7 CANNOT VERIFY, exit 0, each naming the file it needs. Options: `ORACLE_LENGTH=4`
+for the slower oracle (~20 min), and `UPSTREAM_CLEAN=<path>` to enable check 3, which needs a
+clean clone of upstream at `70805299` to compare against.
 
 | # | check | result |
 |---|---|---|

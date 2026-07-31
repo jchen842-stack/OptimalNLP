@@ -7,6 +7,18 @@ per-token unit activations. The conclusion partly reverses: **the proxy was flat
 result**, and at the very configuration D5.1 held up as evidence that D5 was too pessimistic,
 real units time out.*
 
+> ### ⚠️ Corrections from later entries (added D5.5, in place — nothing deleted)
+>
+> - **The IoU results in §3 are WITHDRAWN (D5.4).** They were measured at an activation range
+>   of alpha=0 (threshold at 0), giving density ~0.50. At that density the "fire on everything"
+>   formula scores IoU = density by construction, and the reported IoUs sit ~1.01x that. The
+>   number being interpreted was the density. The winning formulas were high-coverage blankets
+>   anchored on `const=NP`/`const=VP`, e.g. `(((const=NP OR const=VP) OR dep=nsubj) OR dep=punct)`
+>   at coverage 0.956.
+> - **The cause is the activation range (D5.5 §0).** The paper specifies the top 0.005
+>   quantile; we used a threshold at 0 — a 100x deviation. Corrected, lift rises to 3.41.
+> - **The frontier/search-cost results here stand.** They do not depend on the IoUs.
+
 ## 0. Headline
 
 - **The proxy neuron was doing more work than the block structure was.** At `K=15, length=4,

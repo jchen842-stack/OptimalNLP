@@ -10,6 +10,24 @@ claiming the mechanism was refuted; testing that claim properly reversed its sig
 honest verdict at n=5 is that the direction is not established. §4 records how that nearly went
 out.*
 
+> ### ⚠️ Corrections from later entries (added D5.5, in place — nothing deleted)
+>
+> - **The IoU comparisons in §3–§5 are WITHDRAWN (D5.4).** Both arms were measured at
+>   alpha=0 (density ~0.50), where IoU ≈ density by construction. The trained-vs-untrained IoU
+>   gap tracks the density gap. §4 already flagged the difference as unestablished at n=5; the
+>   reason is worse than sample size.
+> - **§5's conclusion that the concept VOCABULARY is the binding constraint is unsupported.**
+>   The binding constraint was the activation range. At a corrected range the trained arm
+>   reaches lift 3.41 and **separates from untrained** (3.41 vs 2.07 at alpha=0.05) where at
+>   alpha=0.5 the two are indistinguishable — so the D5.3 question is reopened, with an
+>   instrument that works (D5.5 §2, §5).
+> - **The model itself is verified.** `bowman_snli_best.pth` re-evaluates to
+>   0.7934362934362934 dev accuracy exactly. But the recorded invocation was wrong: it needs
+>   `--max_data 0`, not the defaults (`VERIFICATION.md` check 7, `models/README.md`).
+> - **The density-band lesson in §4 generalised** into a recurring error shape, documented in
+>   `results/METHOD_NOTES.md`: an effect attributed to the swept variable while the unit set
+>   moves underneath it.
+
 ## 0. Headline
 
 - **The bracket collapses toward the pessimistic end.** D5.2 left the answer somewhere between

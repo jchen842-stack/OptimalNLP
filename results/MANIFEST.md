@@ -56,7 +56,17 @@ measurements. Retained because the diary cites them.
 | `real_lemma_control_K50.csv` | lemma K=50 control in the length-3 grid | D5.1 | M=2,547, proxy neuron, disjoint control |
 | `real_token_stats.csv` | `unique_elements.csv` **in part** | D5.1 | M=2,547 mask diagnostics across 5 concept arms. `unique_elements.csv` covers only the all-categories arm; the tag / dep / tag+dep / lemma+synset arms here have **no replacement** |
 
-## Not in the repo
+## Gitignored — present on disk, not in the repo
 
-`results/*.npz` (activations) and `models/*.pth` (checkpoints) are gitignored. See
-`REPRODUCE.md` for regeneration and `models/README.md` for the training provenance.
+Activations. Regenerate with `REPRODUCE.md` step 3; the trained arm needs
+`models/bowman_snli_best.pth` (see `models/README.md` for its provenance).
+
+| file | produced by | diary | status |
+|---|---|---|---|
+| `acts2k_trained_a{0.5,0.2,0.1,0.05,0.005}.npz` | `src/real_activations.py --ckpt ... --alphas` | D5.5 | **current** — trained arm, M=24,199, one file per activation range |
+| `acts2k_untrained_a{0.5,0.2,0.1,0.05,0.005}.npz` | `src/real_activations.py --untrained --alphas` | D5.5 | **current** — untrained arm, same |
+| `real_activations.npz` | `src/real_activations.py --untrained` | D5.2 | **superseded** — M=2,547, alpha=0 (threshold at 0) |
+| `real_activations_trained.npz` | `src/real_activations.py --ckpt` | D5.3 | **superseded** — M=2,547, alpha=0 |
+
+`models/*.pth` (4 checkpoints, 54 MB each) are likewise gitignored; `models/README.md` records
+the exact invocation, hyperparameters, and what about the provenance is and is not verified.

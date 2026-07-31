@@ -7,6 +7,19 @@ numbered D5.1 rather than D6 because the result is not a new direction but a **r
 central claim** — real overlap is block-structured, the synthetic generator overstated the
 severity, and the wall lives on a different axis than D5 reported.*
 
+> ### ⚠️ Corrections from later entries (added D5.5, in place — nothing deleted)
+>
+> - **Finding 4, "the wall arrives on the K axis": superseded by D5.5 §3.** The wall arrives on
+>   the **length** axis. At M=24,199, exact search at length 3 terminates in 4.7–8.5 s even at
+>   K=50 all-categories, while length 4 at K=15 takes 200–1,500 s with timeouts. K=15→50 at
+>   length 3 costs ~4x; length 3→4 at K=15 costs 100x or more.
+> - **Finding 3, "~half the concept pairs stay disjoint": needs qualifying (D5.5 §1).**
+>   `disjoint_pairs` is a property of the *vocabulary*. The paper's §4.3 variable is the
+>   fraction of *elements* carrying exactly one concept, which is **13.9%**, not ~51%, and it
+>   falls as the corpus grows. The two statistics point opposite ways.
+> - **The 2,547-token corpus is superseded** by 24,199 tokens (D5.5 §1).
+> - Results here use the **proxy** neuron throughout.
+
 ## 0. Headline
 
 - **No new dependencies.** The token annotations (`snli_1.0_dev.feats`) ship pre-computed in
