@@ -19,16 +19,19 @@ Each is ~54 MB.
 ## Invocation
 
 ```sh
-python src/train_snli_encoder.py
+python src/train_snli_encoder.py --max_data 0
 ```
 
-No flags were recorded in the diary for the run that produced `bowman_snli_best.pth`. See
-"Seed and provenance" below for what can and cannot be asserted about that.
+`--max_data 0` is **required** and is not the default. Verified: the checkpoint stores a
+33,671-type vocabulary, and rebuilding the training set gives 33,671 types only with
+`--max_data 0` (549,367 pairs). The default `--max_data 100000` yields 99,889 pairs and a
+16,669-type vocabulary, which cannot have produced this checkpoint. See
+`VERIFICATION.md` check 7.
 
 ## Hyperparameters
 
-These are the `train_snli_encoder.py` argparse defaults, and the four that the checkpoint
-stores internally match them exactly.
+Mostly `train_snli_encoder.py` argparse defaults; `--max_data` is the exception. The four
+values the checkpoint stores internally match.
 
 | parameter | value | source |
 |---|---|---|
@@ -38,9 +41,9 @@ stores internally match them exactly.
 | learning rate | 1e-3 | default |
 | embedding dim | 300 | default, **confirmed in checkpoint** |
 | hidden dim | 512 | default, **confirmed in checkpoint** |
-| `--max_data` | 100000 | default (see note below) |
+| `--max_data` | **0** (= use all 549,367 pairs) | **NOT the default**; recovered from vocab size |
 | `--data` | `data/snli_1.0/` relative to the NLI code dir | default |
-| seed | 0 | default — see caveat |
+| seed | 0 (assumed) | default — see caveat, this one is NOT verified |
 
 Training corpus: full SNLI, 549,367 train pairs. Encoder is
 `models.TextEncoder` from the `neuron-explanations-nli` codebase (`NLI_CODE`), an LSTM over
@@ -81,24 +84,25 @@ Checkpoint format matches the upstream NLI codebase: `state_dict`, `stoi`, `itos
 `train_snli_encoder.py` calls `torch.manual_seed(args.seed)` with `--seed` defaulting to
 **0**, so a defaults-only run is seeded and reproducible.
 
-**What cannot be asserted:** the exact command line used for this checkpoint was never
-logged. Every parameter the checkpoint records internally (`embedding_dim` 300,
-`hidden_dim` 512, `epoch` 2 of 3) is consistent with an all-defaults run, and the diary's
-reported corpus size and vocab match too — but consistency is not proof, and the seed in
-particular leaves no trace in the checkpoint. Retraining with defaults should reproduce
-0.7934 dev accuracy; **if it does not, the original run used non-default flags and this
-record is incomplete.** Treat an exact-match retrain as confirmation, and a mismatch as
-evidence that the provenance is lost rather than that something is broken.
+**Recovered:** `--max_data 0`. An earlier version of this file claimed the run used
+defaults throughout; that was wrong. The vocabulary size is a fingerprint of `--max_data`
+and it rules the default out (see above).
 
-`--max_data 100000` is the default but the diary records the full 549,367-pair corpus being
-used, so this flag was either overridden or is not applied to the training split. Check
-`train_snli_encoder.py` before assuming the default was in force.
+**Still NOT verified: the seed.** It leaves no trace in the checkpoint, and no log of the
+invocation survives. `--seed 0` is the default and is what a defaults-run would have used,
+but the run demonstrably did *not* use all defaults, so the seed cannot be inferred from
+that. Retraining with `--seed 0 --max_data 0` should reproduce 0.7934 dev accuracy;
+**if it does not, the original seed was different and this record is incomplete.**
+
+**What IS verified:** the stored checkpoint re-evaluates to dev accuracy
+0.7934362934362934, exactly matching its own stored `val_acc` to 1e-9, on a from-scratch
+evaluation (`VERIFICATION.md` check 7).
 
 ## Retraining
 
 ```sh
 # from the repo root, with NLI_CODE pointing at the neuron-explanations-nli checkout
-python src/train_snli_encoder.py --seed 0
+python src/train_snli_encoder.py --seed 0 --max_data 0
 ```
 
 Then regenerate activations (the sweep binarises at several alphas from one forward pass):
