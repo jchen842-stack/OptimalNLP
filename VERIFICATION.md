@@ -35,9 +35,30 @@ AUDIT PASSED
 ```
 
 From a clean clone with no checkpoint and no activations it degrades rather than failing —
-3 PASS, 7 CANNOT VERIFY, exit 0, each naming the file it needs. Options: `ORACLE_LENGTH=4`
-for the slower oracle (~20 min), and `UPSTREAM_CLEAN=<path>` to enable check 3, which needs a
-clean clone of upstream at `70805299` to compare against.
+3 PASS, 7 CANNOT VERIFY, exit 0, each naming the file it needs.
+
+**Check 3 self-provisions.** It needs a second, *clean* copy of upstream to diff against. The
+upstream repo is **public and anonymously clonable** — verified, `git ls-remote` succeeds with
+no credentials and its `HEAD` is the pinned `70805299` — so if `UPSTREAM_CLEAN` is unset the
+script clones it at the pinned SHA into `.upstream-clean/` (gitignored) and proceeds. It also
+asserts the clean tree is at the pinned SHA and FAILS rather than passing if it is not.
+
+It also needs **no gitignored inputs**: it prefers the documented case (trained unit 413 at
+alpha 0.2, from `results/acts2k_trained_a0.2.npz`) and falls back to the **proxy neuron**,
+derived from the concept masks alone, when the activations are absent. The claim under test is
+"patched and clean produce identical output on identical input", which does not depend on
+which neuron that input contains — so **from a bare clone with only the `.feats` corpus,
+check 3 runs and passes.** The printed `target:` line says which neuron was used.
+
+If the clone cannot be made (no network), it prints the exact command:
+
+```sh
+git clone https://github.com/aiea-lab/optimal-compositional-explanations .upstream-clean \
+  && git -C .upstream-clean checkout $(cat UPSTREAM)
+```
+
+or point at an existing checkout with `UPSTREAM_CLEAN=/path/to/clean ./verify/run_all.sh`.
+Other options: `ORACLE_LENGTH=4` for the slower oracle (~20 min).
 
 | # | check | result |
 |---|---|---|

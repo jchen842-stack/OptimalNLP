@@ -35,7 +35,12 @@ severity, and the wall lives on a different axis than D5 reported.*
   tokens in up to 7 concepts) yet *far more tractable*, because it is block-structured —
   concepts are mutually exclusive **within** a category, so most disjoint pairs survive and the
   fast-path is degraded rather than removed. **Uniform random overlap overstates the damage.**
-- **The wall is real but sits on the K axis, not length alone.** K=50 / length 4 does not
+- ⚠️ **Superseded — see the correction banner at the top of this entry.** The wall sits on
+  the **length** axis. At M=24,199 exact search at length 3 terminates in 4.7–8.5 s even at
+  K=50, while length 4 at K=15 takes 200–1,500 s with timeouts. The claim below is left as
+  written.
+
+  **The wall is real but sits on the K axis, not length alone.** K=50 / length 4 does not
   terminate; a K-matched disjoint control at the same size visits **2 nodes in 0.25 s**.
 - **The fix holds on real data, and more cleanly than on synthetic** — IoU plateaus at beam 200
   (2.3 s) instead of wobbling with width.
@@ -128,7 +133,8 @@ instant overlap appeared — the fast-path was **removed**. Real annotation cann
 token has exactly one POS tag, so `tag=NN` and `tag=DT` are mutually exclusive *by definition*;
 the same holds within `dep`, within `lemma`, within `synset`. Overlap exists only **across**
 categories. The concept graph is therefore a union of cliques of mutual exclusion, and
-`disjoint_pairs` stays high: 110/210 at K=15, 1 954/2 450 at K=50 — **80 % of pairs still
+`disjoint_pairs` stays high: 110/210 at K=15 (52 %), 1 954/2 450 at K=50 — **80 % of pairs at
+K=50 still
 disjoint at the wall.**
 
 So the fast-path is **degraded, not deleted**, and the search survives much further than the

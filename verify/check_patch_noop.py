@@ -17,8 +17,25 @@ FEATS = os.path.expanduser('~/projects/neuron-explanations-nli/nli/data/analysis
 toks = rtm.load_tokens(FEATS, 2000)
 cons = rtm.select_concepts(toks, rtm.CATEGORIES, 15, 5)
 dense = rtm.build_dense(toks, cons)
-z = np.load('results/acts2k_trained_a0.2.npz')
-neuron = z['acts'][413].astype(bool)
+# Prefer the real unit the documented numbers were measured on. If the activations are
+# absent (they are gitignored), fall back to the PROXY neuron, which is derived from the
+# masks alone and needs no .npz -- the no-op claim is "patched and clean produce identical
+# output on identical input", which does not depend on which neuron that input contains.
+ACTS = 'results/acts2k_trained_a0.2.npz'
+if os.path.exists(ACTS):
+    neuron = np.load(ACTS)['acts'][413].astype(bool)
+    TARGET = 'trained unit413 a=0.2 (the documented case)'
+else:
+    coverage = dense.sum(axis=1)
+    order = np.argsort(-coverage)
+    K0 = dense.shape[0]
+    mid = order[K0 // 3: K0 // 3 + 3]
+    neuron = np.zeros(dense.shape[1], dtype=bool)
+    for k in mid:
+        neuron |= dense[k]
+    flip = np.random.default_rng(999).random(dense.shape[1]) < 0.05
+    neuron = np.where(flip, ~neuron, neuron)
+    TARGET = 'PROXY neuron (activations absent; see verify/check_patch_noop.py)' 
 
 K, M = dense.shape
 masks=[sparse.csr_matrix(dense[c].reshape(1,M)) for c in range(K)]
@@ -48,6 +65,7 @@ def render(f, c):
     return f"({render(f.left,c)} {f.op} {render(f.right,c)})"
 
 print(f"build            : {'PATCHED (MAX_FRONTIER_SIZE=None)' if patched else 'CLEAN UPSTREAM 7080529'}")
+print(f"target           : {TARGET}")
 print(f"formula          : {render(label, cons)}")
 print(f"best_iou  (repr) : {iou!r}")
 print(f"best_iou  (hex)  : {float(iou).hex()}")

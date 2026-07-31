@@ -511,6 +511,12 @@ overstated it, which is why it was flagged as not-for-inference at the time.
 
 ## Band comparison, corrected twice more
 
+> **Headline figure: +5.05%**, the matched-length (length 3) ratio of averages over pairs
+> whose solutions differ — on the lower edge of the paper's +5.1–6.5% vision band. The
+> **+8.43%** that appears repeatedly below is the *unmatched* length-4 figure, which was the
+> working number before length matching and is retained to show how it was corrected. Where
+> the two appear together, +5.05% is the comparable one.
+
 ### (1) Restriction to differing pairs
 
 Table 4's caption restricts to "all the units in the layer for which the optimal and the

@@ -10,8 +10,9 @@
 # Env:
 #   PY                    python to use (default: the compexp env, else `python3`)
 #   OPTIMALCE_UPSTREAM    patched upstream tree (default ~/projects/optimalce)
-#   UPSTREAM_CLEAN        clean upstream @70805299, for the patch no-op check.
-#                         If unset, check 3 reports CANNOT VERIFY with the clone command.
+#   UPSTREAM_CLEAN        clean upstream at the pinned SHA, for the patch no-op check.
+#                         If unset, it is cloned automatically into .upstream-clean/
+#                         (the upstream repo is public; no credentials needed).
 #   ORACLE_LENGTH         3 (default) or 4. Length 4 takes ~20 min.
 
 set -uo pipefail
@@ -66,26 +67,59 @@ run_check "2. padding" \
   "\"$PY\" verify/check_padding.py" \
   "$FEATS" ".feats corpus"
 
-# Check 3 needs two trees to compare, so it is driven here rather than by one script.
+# Check 3 needs a second, CLEAN copy of upstream to compare against, so it is driven here
+# rather than by one script. It self-provisions: the upstream repo is public and anonymously
+# clonable, so if UPSTREAM_CLEAN is unset we clone it at the pinned SHA into a repo-local
+# ignored directory. This is the load-bearing claim in the repo -- a skipped check here looks
+# like avoidance, so it should only skip when the network genuinely is not there.
 hdr "3. patch is a no-op when MAX_FRONTIER_SIZE=None"
-if [ -z "${UPSTREAM_CLEAN:-}" ] || [ ! -d "${UPSTREAM_CLEAN:-/nonexistent}" ]; then
-  echo "  SKIPPED: no clean upstream tree."
-  echo "  To enable:  git clone https://github.com/aiea-lab/optimal-compositional-explanations /tmp/upstream_clean"
-  echo "              cd /tmp/upstream_clean && git checkout \$(cat $PWD/UPSTREAM)"
-  echo "              UPSTREAM_CLEAN=/tmp/upstream_clean ./verify/run_all.sh"
-  record "3. patch no-op" "CANNOT VERIFY" "needs UPSTREAM_CLEAN=<clean @70805299>"
-elif [ ! -e "results/acts2k_trained_a0.2.npz" ]; then
-  echo "  SKIPPED: missing results/acts2k_trained_a0.2.npz"
-  record "3. patch no-op" "CANNOT VERIFY" "needs results/acts2k_trained_a0.2.npz"
-else
-  A="$(OPTIMALCE_UPSTREAM="$OPTIMALCE_UPSTREAM" "$PY" verify/check_patch_noop.py 2>&1 | grep -E 'formula|best_iou|visited|expanded|estimated|peak')"
-  B="$(OPTIMALCE_UPSTREAM="$UPSTREAM_CLEAN"     "$PY" verify/check_patch_noop.py 2>&1 | grep -E 'formula|best_iou|visited|expanded|estimated|peak')"
-  echo "$A" | sed 's/^/  patched: /'
-  if [ "$A" = "$B" ]; then
-    echo "  identical to clean upstream"; record "3. patch no-op" "PASS" ""
+PINNED="$(cat UPSTREAM)"
+CLEAN_DEFAULT=".upstream-clean"
+CLONE_CMD="git clone https://github.com/aiea-lab/optimal-compositional-explanations $CLEAN_DEFAULT && git -C $CLEAN_DEFAULT checkout $PINNED"
+
+if [ -z "${UPSTREAM_CLEAN:-}" ]; then
+  if [ -d "$CLEAN_DEFAULT/compositional" ]; then
+    UPSTREAM_CLEAN="$CLEAN_DEFAULT"
+    echo "  using existing $CLEAN_DEFAULT"
   else
-    echo "  DIFFERS from clean upstream"; diff <(echo "$A") <(echo "$B") | sed 's/^/    /'
-    record "3. patch no-op" "FAIL" "outputs differ"
+    echo "  provisioning a clean upstream at $PINNED into $CLEAN_DEFAULT ..."
+    rm -rf "$CLEAN_DEFAULT"
+    if GIT_TERMINAL_PROMPT=0 git clone -q \
+         https://github.com/aiea-lab/optimal-compositional-explanations "$CLEAN_DEFAULT" 2>/dev/null \
+       && git -C "$CLEAN_DEFAULT" checkout -q "$PINNED" 2>/dev/null; then
+      UPSTREAM_CLEAN="$CLEAN_DEFAULT"
+      echo "  cloned and checked out $PINNED"
+    else
+      echo "  could not clone (no network, or the upstream repo moved)."
+      echo "  Run this, then re-run this script:"
+      echo
+      echo "    $CLONE_CMD"
+      echo
+      echo "  Or point at an existing checkout:  UPSTREAM_CLEAN=/path/to/clean ./verify/run_all.sh"
+      record "3. patch no-op" "CANNOT VERIFY" "clone failed; see the command printed above"
+      UPSTREAM_CLEAN=""
+    fi
+  fi
+fi
+
+if [ -n "${UPSTREAM_CLEAN:-}" ]; then
+  got="$(git -C "$UPSTREAM_CLEAN" rev-parse HEAD 2>/dev/null || echo unknown)"
+  if [ "$got" != "$PINNED" ]; then
+    echo "  clean tree is at $got, expected $PINNED"
+    record "3. patch no-op" "FAIL" "clean tree at wrong commit"
+  else
+    if [ ! -e "results/acts2k_trained_a0.2.npz" ]; then
+      echo "  activations absent -> comparing on the proxy neuron instead (still a valid no-op test)"
+    fi
+    A="$(OPTIMALCE_UPSTREAM="$OPTIMALCE_UPSTREAM" "$PY" verify/check_patch_noop.py 2>&1 | grep -E 'target|formula|best_iou|visited|expanded|estimated|peak')"
+    B="$(OPTIMALCE_UPSTREAM="$UPSTREAM_CLEAN"     "$PY" verify/check_patch_noop.py 2>&1 | grep -E 'target|formula|best_iou|visited|expanded|estimated|peak')"
+    echo "$A" | sed 's/^/  patched: /'
+    if [ "$A" = "$B" ]; then
+      echo "  identical to clean upstream @ $PINNED"; record "3. patch no-op" "PASS" ""
+    else
+      echo "  DIFFERS from clean upstream"; diff <(echo "$A") <(echo "$B") | sed 's/^/    /'
+      record "3. patch no-op" "FAIL" "outputs differ"
+    fi
   fi
 fi
 

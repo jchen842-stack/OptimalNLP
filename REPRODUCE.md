@@ -144,12 +144,32 @@ message naming the command to run, rather than a bare `FileNotFoundError`.
 
 ## 7. Re-run the audit
 
+One command runs everything and prints a PASS / FAIL / CANNOT VERIFY table, exiting nonzero
+if anything failed:
+
+```sh
+./verify/run_all.sh
+```
+
+**No manual setup is needed for the patch no-op check (check 3).** It compares our patched
+upstream against a clean copy at the pinned SHA, and clones that copy itself into
+`.upstream-clean/` (gitignored) on first run — the upstream repo is public and needs no
+credentials. It verifies the clone is at the SHA in `UPSTREAM` and fails rather than passing
+if it is not. With no network it prints the exact clone command instead of skipping silently.
+
+It needs no gitignored inputs either: it uses the documented neuron when
+`results/acts2k_trained_a0.2.npz` is present and the proxy neuron otherwise, so **from a bare
+clone with only the `.feats` corpus it runs and passes** (4/10 PASS, 6 CANNOT VERIFY, exit 0).
+
+Individual checks, if you want them one at a time:
+
 ```sh
 python verify/check_alignment.py       python verify/check_masks.py
 python verify/check_padding.py         python verify/check_stubs.py
 python verify/check_iou.py             python verify/check_stub_calltrace.py
 python verify/check_binarise.py        python verify/check_model.py
-# check 3 needs both trees; see VERIFICATION.md
+ORACLE_LENGTH=3 python tests/test_bruteforce_oracle.py
+# check 3 compares two trees; run it via run_all.sh, or set OPTIMALCE_UPSTREAM by hand
 ```
 
 ## Unrecorded seeds — nothing papered over

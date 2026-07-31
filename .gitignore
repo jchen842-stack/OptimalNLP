@@ -15,3 +15,6 @@ models/*
 *.feats
 snli_1.0*/
 *.jsonl
+
+# clean upstream clone provisioned by verify/run_all.sh for the patch no-op check
+.upstream-clean/
