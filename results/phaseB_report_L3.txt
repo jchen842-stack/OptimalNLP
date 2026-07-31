@@ -1,0 +1,216 @@
+wrote results/beam_vs_exact_L3_K15.csv  (27 pairs)
+
+=== BEAM vs EXACT (per run; density is per-run realised, not arm mean) ===
+       arm  alpha     unit   d_run  beamIoU   exIoU   gIoU%  gLift%   covR  bPrec  ePrec   bRec   eRec  visited  expand    time  halt
+   trained    0.2  unit413   0.200    0.469   0.469    0.00    0.00   1.00  0.599  0.599  0.683  0.683       65     260     0.1    no
+   trained    0.2   unit88   0.129    0.252   0.252    0.00    0.00   1.00  0.384  0.384  0.423  0.423      398     434     0.5    no
+   trained    0.2   unit92   0.200    0.258   0.258    0.00    0.00   1.00  0.306  0.306  0.619  0.619      506     437     0.9    no
+   trained    0.1  unit396   0.095    0.145   0.145    0.00    0.00   1.00  0.176  0.176  0.455  0.455      717     443     1.1    no
+   trained    0.1  unit413   0.026    0.095   0.095    0.00    0.00   1.00  0.116  0.116  0.343  0.343      340     319     0.4    no
+   trained    0.1  unit510   0.100    0.158   0.158    0.00    0.00   1.00  0.218  0.218  0.360  0.360      866     608     1.9    no
+   trained    0.1   unit88   0.091    0.182   0.182    0.00    0.00   1.00  0.212  0.212  0.557  0.557      419     486     0.5    no
+   trained    0.1   unit92   0.100    0.159   0.159    0.13   -0.46   1.02  0.209  0.208  0.399  0.404      677     471     1.1    no
+   trained   0.05  unit395   0.050    0.083   0.095   14.53  -13.44   2.85  0.121  0.104  0.212  0.522      585     477     1.0    no
+   trained   0.05  unit412   0.050    0.098   0.098    0.00    0.00   1.00  0.132  0.132  0.275  0.275      575     465     0.8    no
+   trained   0.05   unit86   0.036    0.207   0.207    0.00    0.00   1.00  0.296  0.296  0.407  0.407      203     319     0.3    no
+   trained   0.05   unit87   0.050    0.072   0.072    0.00    0.00   1.00  0.089  0.089  0.271  0.271     1795     713     5.5    no
+   trained   0.05   unit91   0.050    0.110   0.110    0.00    0.00   1.00  0.131  0.131  0.400  0.400      556     432     0.8    no
+ untrained    0.2  unit396   0.200    0.239   0.252    5.27   21.92   0.75  0.402  0.490  0.371  0.341      821     544     1.8    no
+ untrained    0.2  unit510   0.200    0.271   0.271    0.00    0.00   1.00  0.343  0.343  0.566  0.566      350     490     0.5    no
+ untrained    0.2   unit88   0.200    0.239   0.239    0.00    0.00   1.00  0.242  0.242  0.948  0.948      717     497     1.3    no
+ untrained    0.2   unit92   0.200    0.280   0.280    0.00    0.00   1.00  0.512  0.512  0.382  0.382      291     503     0.5    no
+ untrained    0.1  unit396   0.100    0.149   0.149    0.00    0.00   1.00  0.202  0.202  0.359  0.359      519     578     1.0    no
+ untrained    0.1  unit413   0.100    0.137   0.144    5.56   11.43   0.72  0.143  0.159  0.763  0.610      817     502     1.6    no
+ untrained    0.1  unit510   0.100    0.154   0.154    0.00    0.00   1.00  0.263  0.263  0.272  0.272      579     474     0.9    no
+ untrained    0.1   unit88   0.100    0.135   0.135    0.00    0.00   1.00  0.175  0.175  0.371  0.371     1127     477     1.9    no
+ untrained    0.1   unit92   0.100    0.195   0.195    0.00    0.00   1.00  0.248  0.248  0.477  0.477      334     423     0.5    no
+ untrained   0.05  unit396   0.050    0.075   0.075    0.40  -21.05   2.91  0.104  0.082  0.215  0.494     1162     682     3.2    no
+ untrained   0.05  unit413   0.050    0.095   0.104    8.81   -8.01   1.74  0.134  0.123  0.250  0.400      631     528     1.2    no
+ untrained   0.05  unit510   0.047    0.071   0.073    3.09   -0.56   1.19  0.084  0.084  0.313  0.369     1178     565     2.5    no
+ untrained   0.05   unit88   0.050    0.092   0.092    0.00    0.00   1.00  0.104  0.104  0.441  0.441      663     432     1.1    no
+ untrained   0.05   unit92   0.050    0.117   0.117    0.00    0.00   1.00  0.156  0.156  0.318  0.318      579     454     0.9    no
+
+=== BAND COMPARISON: ratio of averages (the like-for-like statistic) ===
+  (a) ALL pairs:
+            pooled n=27  sum(exact_IoU)=4.5803 sum(beam_IoU)=4.5369  ratio-of-averages = +0.96%  <- OUTSIDE the vision band
+           trained n=13  sum(exact_IoU)=2.2997 sum(beam_IoU)=2.2874  ratio-of-averages = +0.54%
+         untrained n=14  sum(exact_IoU)=2.2806 sum(beam_IoU)=2.2495  ratio-of-averages = +1.38%
+
+  (b) RESTRICTED to pairs whose returned FORMULAS differ [LIKE-FOR-LIKE with Table 4's caption] -- dropped 20 of 27:
+            pooled n= 7  sum(exact_IoU)=0.9036 sum(beam_IoU)=0.8602  ratio-of-averages = +5.05%  <- OUTSIDE the vision band
+           trained n= 2  sum(exact_IoU)=0.2547 sum(beam_IoU)=0.2424  ratio-of-averages = +5.07%
+         untrained n= 5  sum(exact_IoU)=0.6489 sum(beam_IoU)=0.6178  ratio-of-averages = +5.03%
+
+  cross-check: 20 extensionally identical (same n_fires AND n_inter); 20 syntactically identical; 20 with identical IoU to 1e-9
+  paper Table 4 (vision): +5.1% .. +6.5%, max length 3, beam size 5 (Appendix B); ours is length 4, beam 200
+
+=== OPTIMALITY GAP MAGNITUDE (averages of ratios; NOT band-comparable) ===
+  IoU-based (per-unit ratios), n=27: mean +1.40%  median +0.00%  range +0.00% .. +14.53%
+    per-unit: +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.1, +0.4, +3.1, +5.3, +5.6, +8.8, +14.5
+    mean +1.40% vs median +0.00% -- mean is skewed by outliers
+    NOT compared to the vision band here -- see the ratio-of-averages block above, which is the like-for-like statistic.
+  lift-based (what predictions #1/#2 are scored on), n=27: mean -0.38%  median +0.00%  range -21.05% .. +21.92%
+    per-unit: -21.1, -13.4, -8.0, -0.6, -0.5, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +0.0, +11.4, +21.9
+
+=== PRE-REGISTERED #1 PRIMARY: IoU optimality gap vs lift ===
+  per-stratum rho(rel_gain_iou_pct, exact_lift):
+       trained alpha=0.2    n=3  rho=+nan  p=nan
+       trained alpha=0.1    n=5  rho=-0.354  p=0.559
+       trained alpha=0.05   n=5  rho=-0.354  p=0.559
+     untrained alpha=0.2    n=4  rho=+0.258  p=0.742
+     untrained alpha=0.1    n=5  rho=-0.707  p=0.182
+     untrained alpha=0.05   n=5  rho=-0.205  p=0.741
+
+  STRATIFIED (headline): rho = -0.289  n = 27 across 6 strata
+  p = 0.0782  (one-sided, 10000 within-stratum permutations of exact_lift)
+  prediction rho < 0 -> NOT SUPPORTED (negative rank correlation, not significant at 0.05)
+  [CONFOUNDED, not the headline] pooled rho = -0.258 (no p reported) -- alpha moves lift and density together, so this is rho(rel_gain_iou_pct, density) sign-flipped and cannot separate the two.
+
+  rel_gain_iou_pct vs exact_lift (pooled view; scoring is stratified)
+  y=rel_gain_iou_pct [0 .. 14.5]   x=exact_lift [1.21 .. 8.12]   (t=trained, u=untrained, #=overlap)
+       14.5 |       t                                                |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |         u                                              |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |   u     u                                              |
+            |                                                        |
+            |    u                                                   |
+            |                                                        |
+            |                                                        |
+          0 |u t##t#tt ##  #u         t                             t|
+            +--------------------------------------------------------+
+            1.21                                            8.12
+
+=== PRE-REGISTERED #1 SECONDARY (as registered): lift gap vs lift ===
+  per-stratum rho(rel_gain_lift_pct, exact_lift):
+       trained alpha=0.2    n=3  rho=+nan  p=nan
+       trained alpha=0.1    n=5  rho=+0.354  p=0.559
+       trained alpha=0.05   n=5  rho=+0.354  p=0.559
+     untrained alpha=0.2    n=4  rho=+0.258  p=0.742
+     untrained alpha=0.1    n=5  rho=-0.707  p=0.182
+     untrained alpha=0.05   n=5  rho=+0.616  p=0.269
+
+  STRATIFIED (headline): rho = +0.162  n = 27 across 6 strata
+  p = 0.7694  (one-sided, 10000 within-stratum permutations of exact_lift)
+  prediction rho < 0 -> NOT SUPPORTED (positive rank correlation, not significant at 0.05)
+  [CONFOUNDED, not the headline] pooled rho = +0.103 (no p reported) -- alpha moves lift and density together, so this is rho(rel_gain_lift_pct, density) sign-flipped and cannot separate the two.
+
+  rel_gain_lift_pct vs exact_lift (pooled view; scoring is stratified)
+  y=rel_gain_lift_pct [-21.1 .. 21.9]   x=exact_lift [1.21 .. 8.12]   (t=trained, u=untrained, #=overlap)
+       21.9 |         u                                              |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |   u                                                    |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |u tu#t#tt ##  #u         t                             t|
+            |                                                        |
+            |                                                        |
+            |         u                                              |
+            |                                                        |
+            |       t                                                |
+            |                                                        |
+      -21.1 |   u                                                    |
+            +--------------------------------------------------------+
+            1.21                                            8.12
+
+=== PRE-REGISTERED #2: exact search time vs lift ===
+  per-stratum rho(time_s, exact_lift):
+       trained alpha=0.2    n=3  rho=-1.000  p=0.000
+       trained alpha=0.1    n=5  rho=-0.700  p=0.188
+       trained alpha=0.05   n=5  rho=-0.975  p=0.005
+     untrained alpha=0.2    n=4  rho=-0.400  p=0.600
+     untrained alpha=0.1    n=5  rho=-0.800  p=0.104
+     untrained alpha=0.05   n=5  rho=-0.900  p=0.037
+
+  STRATIFIED (headline): rho = -0.799  n = 27 across 6 strata
+  p = 0.0001  (one-sided, 10000 within-stratum permutations of exact_lift)
+  prediction rho < 0 -> SUPPORTED (negative rank correlation, significant at 0.05)
+  [CONFOUNDED, not the headline] pooled rho = -0.694 (no p reported) -- alpha moves lift and density together, so this is rho(time_s, density) sign-flipped and cannot separate the two.
+
+  time_s vs exact_lift (pooled view; scoring is stratified)
+  y=time_s [0.11 .. 5.52]   x=exact_lift [1.21 .. 8.12]   (t=trained, u=untrained, #=overlap)
+       5.52 |    t                                                   |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |   u                                                    |
+            |                                                        |
+            |    u                                                   |
+            |    u                                                   |
+            |   u   t u                                              |
+            |u        u                                              |
+            |  t  t#t   u   u                                        |
+            |   u    t u#  t                                         |
+       0.11 |          u   t          t                             t|
+            +--------------------------------------------------------+
+            1.21                                            8.12
+
+=== COVERAGE RATIO exact/beam (write-up flag, n=27) ===
+  mean 1.154  median 1.000  range 0.717 .. 2.909
+  above 1.0: 5/27  -- systematic widening requires the full n=27, do not infer from one unit
+
+  lift vs REALISED DENSITY (alpha is a label, not the x-axis)
+  y=exact_lift [1.21 .. 8.12]   x=density_run [0.0261 .. 0.2]   (t=trained, u=untrained, #=overlap)
+       8.12 |   t                                                    |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |t                                                       |
+            |                                                        |
+            |                                                        |
+            |       u                                                |
+            |       #               u        t                      t|
+            |       u            t  #                              uu|
+            |      u#             t #                               u|
+       1.21 |       u               u                              # |
+            +--------------------------------------------------------+
+            0.0261                                            0.2
+
+  exact time vs REALISED DENSITY
+  y=time_s [0.11 .. 5.52]   x=density_run [0.0261 .. 0.2]   (t=trained, u=untrained, #=overlap)
+       5.52 |       t                                                |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |                                                        |
+            |       u                                                |
+            |                                                        |
+            |      u                                                 |
+            |                       u                                |
+            |                       #                               u|
+            |       u                                              u |
+            |       #             t #                              t |
+            |       #            t           t                     uu|
+       0.11 |t  t                   u                               t|
+            +--------------------------------------------------------+
+            0.0261                                            0.2
+
+=== WITHIN-UNIT SERIES across alpha (Q3 scored on visited/expanded) ===
+   untrained  unit396 | a=0.2: vis=  821 exp=  544 t=   1.8s lift=2.45 | a=0.1: vis=  519 exp=  578 t=   1.0s lift=2.02 | a=0.05: vis= 1162 exp=  682 t=   3.2s lift=1.64
+   untrained  unit413 | a=0.2: -- | a=0.1: vis=  817 exp=  502 t=   1.6s lift=1.59 | a=0.05: vis=  631 exp=  528 t=   1.2s lift=2.46
+   untrained  unit510 | a=0.2: vis=  350 exp=  490 t=   0.5s lift=1.71 | a=0.1: vis=  579 exp=  474 t=   0.9s lift=2.63 | a=0.05: vis= 1178 exp=  565 t=   2.5s lift=1.78
+   untrained   unit88 | a=0.2: vis=  717 exp=  497 t=   1.3s lift=1.21 | a=0.1: vis= 1127 exp=  477 t=   1.9s lift=1.75 | a=0.05: vis=  663 exp=  432 t=   1.1s lift=2.08
+/Users/justin/miniconda3/envs/compexp/lib/python3.8/site-packages/scipy/stats/_stats_py.py:4878: ConstantInputWarning: An input array is constant; the correlation coefficient is not defined.
+  warnings.warn(stats.ConstantInputWarning(warn_msg))
+   untrained   unit92 | a=0.2: vis=  291 exp=  503 t=   0.5s lift=2.56 | a=0.1: vis=  334 exp=  423 t=   0.5s lift=2.48 | a=0.05: vis=  579 exp=  454 t=   0.9s lift=3.11
+     trained  unit413 | a=0.2: vis=   65 exp=  260 t=   0.1s lift=3.00 | a=0.1: vis=  340 exp=  319 t=   0.4s lift=4.46 | a=0.05: --
+     trained   unit88 | a=0.2: vis=  398 exp=  434 t=   0.5s lift=2.99 | a=0.1: vis=  419 exp=  486 t=   0.5s lift=2.33 | a=0.05: --
+     trained   unit92 | a=0.2: vis=  506 exp=  437 t=   0.9s lift=1.53 | a=0.1: vis=  677 exp=  471 t=   1.1s lift=2.08 | a=0.05: --
