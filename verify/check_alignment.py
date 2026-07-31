@@ -62,7 +62,13 @@ def main():
         print(f"  token streams identical: {same}")
         if not same: fails.append(f"{label}: parser mismatch")
 
-        for arm, ckpt in (('untrained', None), ('trained','models/bowman_snli_best.pth')):
+        arms = [('untrained', None)]
+        if os.path.exists('models/bowman_snli_best.pth'):
+            arms.append(('trained', 'models/bowman_snli_best.pth'))
+        else:
+            print("  [skip] trained arm: models/bowman_snli_best.pth absent (gitignored; "
+                  "see models/README.md). The untrained arm still exercises the same code.")
+        for arm, ckpt in arms:
             if ckpt:
                 ck = torch.load(ckpt, map_location='cpu'); stoi = ck['stoi']
             else:

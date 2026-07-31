@@ -16,7 +16,8 @@ Environment: `~/miniconda3/envs/compexp/bin/python`, run from the repo root.
 | 6 | vision stubs never touched on the NLP path | **PASS** |
 | 7 | checkpoint reproduces 0.7934 | **PASS**, but see the finding below |
 | 8 | binarisation is per-unit | **PASS** |
-| 9 | someone else can run this | see `REPRODUCE.md` |
+| 9 | someone else can run this | see `REPRODUCE.md` §6b — untrained path reproduces; trained path needs the gitignored checkpoint |
+| 10 | brute-force oracle over the whole formula space | **PASS** (`tests/test_bruteforce_oracle.py`) |
 
 **Nothing failed. Two things changed as a result of the audit** (both in §7 and §Surprises):
 `models/README.md` asserted the wrong training invocation, and it has been corrected.
@@ -140,7 +141,8 @@ Agreement is to full float precision.
 `utils/optimal_utils.py`. They are not exercised against upstream equivalents here — check 3
 covers them indirectly, since patched and clean produce identical `visited`/`expanded`
 through the same helpers, but that is a consistency argument, not an equivalence proof
-against upstream's own versions. **This is the weakest link in the audit.**
+against upstream's own versions. **Closed by check 10**, which validates them end to end
+against an exhaustive oracle.
 
 ## 5. Are the masks right? — PASS
 
@@ -295,6 +297,40 @@ shortfall. This is why per-run density is load-bearing.
 
 ---
 
+## Additions after the fixes
+
+### n=23 is MACHINE-DEPENDENT
+
+Four of the 27 length-4 Phase B runs hit the time budget **on this hardware** (see
+`results/ENVIRONMENT.md`) and are excluded, giving n=23. On faster hardware fewer runs
+time out, n is larger, and **the stratified rank correlations, the ratio-of-averages, and
+the gap distribution all change** — not because anything is wrong, but because the sample
+is defined by a wall-clock cutoff. Two consequences:
+
+- Any re-run should report its own n and its own timeout list, not inherit n=23.
+- The time budget is additionally **soft**: it is checked once per 256 heap pushes, and one
+  run overshot to 2085s against a 1500s cap. A `halted=time` row's `time_s` is not a precise
+  measurement.
+
+The length-3 grid has **no timeouts at all**, so its n=27 is hardware-independent. Prefer it
+for anything that has to be stable across machines.
+
+### The OOV inversion — a clean number is the alarm, not the all-clear
+
+With the checkpoint's own `stoi` (33,671 types), 8.8% of probe-corpus tokens are OOV.
+Rebuilding `stoi` from the probe corpus instead gives **0.0% OOV** — and that is the broken
+configuration.
+
+This is backwards from intuition. The instinct is that a wrong vocabulary shows up as OOV
+noise, so a low OOV rate reads as reassurance. The opposite holds: a vocabulary built *from*
+the probe corpus covers it perfectly by construction, so every token maps to some embedding
+row, none are flagged, and every row is the wrong one. There is no error, no warning, and no
+signal of any kind.
+
+**A suspiciously clean OOV rate against a pretrained checkpoint means the vocabulary is
+wrong.** A nonzero OOV rate is the healthy case. This is the failure that hides, and it is
+why `real_activations.py` takes `stoi` from the checkpoint and prints the rate.
+
 ## Surprises, including things that passed
 
 1. **`--max_data` was not the default.** The one substantive error the audit found. Caught
@@ -319,10 +355,41 @@ shortfall. This is why per-run density is load-bearing.
    The guarantee comes from `enforce_sorted=False` in upstream's `get_states`, not from our
    assertion. If upstream ever changed that, `verify_alignment` would not notice.
 
-## What this audit does NOT cover
+## 10. Brute-force oracle — PASS
 
-- `compute_quantities` / `compute_disjoint_info` are not tested against upstream's own
-  implementations (see check 4). This is the largest remaining gap.
+Closes the gap flagged under check 4. Rather than reimplement the quantity helpers, the
+oracle enumerates the **entire formula space** and scores every formula with plain numpy —
+no heuristic, no frontier, no shared helpers — then asserts the max equals what the search
+returns.
+
+The enumeration is over **masks**, not trees, so associativity and commutativity collapse
+for free: `L1 = {c, ~c}` (30 literals at K=15), `L(n) = {a op b}` for `op` in {AND, OR}.
+NOT applies only to leaves, matching `formula.Not.__init__`'s assertion, and "length" is
+the leaf count, matching `formula.F.__len__`. That makes it a superset of what the search
+explores, so equality is a genuine end-to-end validation.
+
+```sh
+python tests/test_bruteforce_oracle.py           # length 3
+ORACLE_LENGTH=4 python tests/test_bruteforce_oracle.py
+```
+
+Length 3, K=15, M=24,199 — 7,360 distinct masks, three cases:
+
+| case | brute-force max IoU | search best_iou | difference |
+|---|---|---|---|
+| trained unit88 a=0.1 | `0.18162962962962964` | `0.18162962962962964` | 0.000e+00 |
+| untrained unit92 a=0.1 | `0.1947306198277318` | `0.1947306198277318` | 0.000e+00 |
+| proxy neuron | `0.8527409974013117` | `0.8527409974013117` | 0.000e+00 |
+
+Exact to full precision. This validates the concept masks, `compute_quantities`,
+`compute_disjoint_info`, the admissible heuristic, the frontier, and the returned optimum
+together.
+
+The top level is streamed rather than materialised: at length 4 the full level is ~1.26M
+masks x 24,199 elements ≈ 30 GB as bool. Streaming keeps peak memory in the hundreds of MB
+and cannot change the result, since only the max is needed.
+
+## What this audit does NOT cover
 - The training seed (check 7) — unverifiable from surviving artifacts.
 - Beam-search correctness at `MAX_FRONTIER_SIZE = 200`. Check 3 verifies only the `None`
   path. The beam path changes results by design, so "identical output" is not the test, and

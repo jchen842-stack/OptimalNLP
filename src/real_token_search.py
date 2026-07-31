@@ -341,6 +341,14 @@ def main():
             alpha, untrained, n_excluded = -1.0, False, 0
             label = f"OR{[f'{concepts[k][0]}={concepts[k][1]}' for k in target_ks]}"
         else:
+            if not os.path.exists(args.acts):
+                raise SystemExit(
+                    f"activations not found: {args.acts}\n"
+                    "results/*.npz are gitignored. Generate them first (REPRODUCE.md step 3):\n"
+                    "  python src/real_activations.py --max_sents 2000 --untrained "
+                    "--alphas 0.5 0.2 0.1 0.05 0.005 --out results/acts2k_untrained.npz\n"
+                    "The trained arm additionally needs models/bowman_snli_best.pth "
+                    "(gitignored; see models/README.md).")
             picked, untrained, alpha, n_excluded = load_real_neurons(
                 args.acts, args.units, np.random.default_rng(args.seed + 999),
                 dmin=args.dmin, dmax=args.dmax, min_fire=args.min_fire,

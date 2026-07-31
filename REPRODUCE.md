@@ -122,6 +122,26 @@ Same as step 5 with `--lengths 4` and `--time_budget 1500`. **This is the expens
 *soft* — it is checked once per 256 heap pushes, and one run overshot to 2085s against a
 1500s cap.
 
+## 6b. Verified from a clean clone — where it breaks
+
+This document was tested by cloning the repo into an empty directory and following it. The
+results, so a reader knows what to expect:
+
+| step | outcome from a clean clone |
+|---|---|
+| 2 — `unique_elements.py` | **works.** Needs only `snli_1.0_dev.feats` |
+| 3 — `real_activations.py --untrained` | **works.** No checkpoint needed; prints `[align] 24199 rows; token ORDER verified on 50 sampled indices` |
+| 4 / 5 — search against the **untrained** arm | **works**, once step 3 has run |
+| 3 / 4 / 5 — anything on the **trained** arm | **BREAKS.** Needs `models/bowman_snli_best.pth`, which is gitignored |
+| 7 — `verify/check_masks.py` | **works** |
+| 7 — `check_alignment.py`, `check_binarise.py`, `check_model.py` | **partially break.** They want the checkpoint. `check_alignment.py` now skips the trained arm with a message; the other two require it |
+| 7 — `check_iou.py`, `check_stubs.py`, `check_stub_calltrace.py`, oracle | need `results/*.npz` from step 3 |
+
+**The whole untrained path reproduces from a clean clone with no extra artifacts beyond the
+`.feats` file.** Everything involving the trained arm requires either the 54 MB checkpoint or
+a retrain (`models/README.md`). Running a search before step 3 now fails with an explanatory
+message naming the command to run, rather than a bare `FileNotFoundError`.
+
 ## 7. Re-run the audit
 
 ```sh
