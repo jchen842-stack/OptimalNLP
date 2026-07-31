@@ -1,2 +1,4 @@
+# SUPERSEDED by the lemma K=50 control in the length-3 grid. M=2,547, proxy neuron.
+# Read with: pandas.read_csv(path, comment='#')
 arm,categories,length,beam,mean_overlap,common_frac,disjoint_pairs,peak_frontier,halted,visited,expanded,estimated,best_iou,time_s
 "lemma-only (disjoint control, scales with K)",lemma,4,none,1.0,0.0,2450,257,no,2,418,8998,0.3944,0.25

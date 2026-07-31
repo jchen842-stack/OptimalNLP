@@ -1,3 +1,5 @@
+# SUPERSEDED IN PART by results/unique_elements.csv. M=2,547 mask diagnostics across 5 concept arms. unique_elements.csv covers only the all-categories arm but adds the unique-element fraction (the paper's 4.3 variable) and both corpus sizes; the tag/dep/lemma+synset arms here have no replacement.
+# Read with: pandas.read_csv(path, comment='#')
 arm,categories,K,M,active_tokens,coverage,mean_overlap,common_frac,disjoint_pairs,disjoint_frac,max_overlap
 tag-only (disjoint control),tag,15,2547,2422,0.951,1.0,0.0,210,1.0,1
 dep-only,dep,15,2547,2366,0.929,1.0,0.0,210,1.0,1

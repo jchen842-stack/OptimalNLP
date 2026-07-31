@@ -41,6 +41,7 @@ NLI_CODE = os.environ.get("NLI_CODE", os.path.expanduser(
 sys.path.insert(0, NLI_CODE)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import env_info  # noqa: E402
 import real_token_masks as rtm  # noqa: E402
 
 PAD = "<pad>"
@@ -62,11 +63,15 @@ def build_vocab(sents):
     return stoi
 
 
-def extract_states(sents, stoi, hidden_dim, embedding_dim, seed, ckpt=None, batch_size=64):
+def extract_states(sents, stoi, hidden_dim, embedding_dim, seed, ckpt=None, batch_size=64,
+                   row_tokens=None):
     """Per-token LSTM hidden states, flattened to (n_tokens, hidden_dim).
 
     Tokens come back in exactly the reading order of `rtm.load_sentences`, which is the
     order the concept masks use.
+
+    If `row_tokens` is a list, the surface token behind every output row is appended to it,
+    so `verify_alignment` can assert the ORDER rather than only the count.
     """
     import torch
     import models  # from the NLI codebase
@@ -97,6 +102,8 @@ def extract_states(sents, stoi, hidden_dim, embedding_dim, seed, ckpt=None, batc
             states = enc.get_states(ids, torch.tensor(lengths))  # (seq, batch, hidden)
             for b, n in enumerate(lengths):
                 out.append(states[:n, b, :].numpy())
+                if row_tokens is not None:
+                    row_tokens.extend(text for text, _ in batch[b][:n])
     return np.concatenate(out, axis=0)
 
 
@@ -113,13 +120,39 @@ def binarize(states, alpha=None):
     return (states > thresh[np.newaxis, :]).T
 
 
-def verify_alignment(sents, states):
-    """The masks and the activations must index the same tokens in the same order."""
+def verify_alignment(sents, states, row_tokens=None, n_sample=50, seed=0):
+    """The masks and the activations must index the same tokens in the same ORDER.
+
+    Row counts alone cannot detect a reordering. Order is guaranteed upstream by
+    `pack_padded_sequence(..., enforce_sorted=False)` in `TextEncoder.get_states`, which
+    sorts internally and restores the original order -- but that is upstream's promise, not
+    ours, and it would break silently if upstream changed. So when `row_tokens` is supplied
+    this compares the actual surface token behind `n_sample` random rows against the token
+    the mask side has at the same index.
+    """
     n_tokens = sum(len(s) for s in sents)
     if states.shape[0] != n_tokens:
         raise AssertionError(
             f"token-axis mismatch: {n_tokens} tokens from the .feats parse vs "
             f"{states.shape[0]} activation rows — masks and neurons would not align")
+
+    if row_tokens is None:
+        print("[align] WARNING: row counts only; pass row_tokens= to assert ORDER")
+        return n_tokens
+
+    expected = [text for sent in sents for text, _ in sent]
+    if len(row_tokens) != n_tokens:
+        raise AssertionError(
+            f"row_tokens length {len(row_tokens)} != {n_tokens} tokens")
+    rng = np.random.default_rng(seed)
+    idx = rng.choice(n_tokens, size=min(n_sample, n_tokens), replace=False)
+    bad = [(int(i), expected[i], row_tokens[i]) for i in idx if expected[i] != row_tokens[i]]
+    if bad:
+        detail = "; ".join(f"row {i}: masks={m!r} acts={a!r}" for i, m, a in bad[:5])
+        raise AssertionError(
+            f"TOKEN ORDER MISMATCH at {len(bad)}/{len(idx)} sampled rows — masks and "
+            f"activations are not aligned: {detail}")
+    print(f"[align] {n_tokens} rows; token ORDER verified on {len(idx)} sampled indices")
     return n_tokens
 
 
@@ -139,8 +172,11 @@ def main():
                     help="sweep several alphas from ONE forward pass; --out is treated as a "
                          "template and gets an _a<alpha> suffix per value")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--align_sample", type=int, default=50,
+                    help="rows to spot-check for token-order alignment")
     ap.add_argument("--out", default="results/real_activations.npz")
     args = ap.parse_args()
+    env_info.print_banner('acts')
 
     if not args.untrained and args.ckpt is None:
         ap.error("pass --untrained for the random-weights control, or --ckpt PATH for a trained model")
@@ -167,9 +203,11 @@ def main():
     print(f"[acts] {len(sents)} sentences | {sum(len(s) for s in sents)} tokens | "
           f"vocab {len(stoi)} | {'UNTRAINED (random weights)' if args.untrained else args.ckpt}")
 
+    row_tokens = []
     states = extract_states(sents, stoi, hidden_dim, embedding_dim,
-                            args.seed, ckpt=args.ckpt)
-    n_tokens = verify_alignment(sents, states)
+                            args.seed, ckpt=args.ckpt, row_tokens=row_tokens)
+    n_tokens = verify_alignment(sents, states, row_tokens=row_tokens,
+                                n_sample=args.align_sample)
     print(f"[acts] states {states.shape} — aligned to {n_tokens} mask tokens")
 
     # The forward pass does not depend on alpha -- only the binarization does -- so a sweep

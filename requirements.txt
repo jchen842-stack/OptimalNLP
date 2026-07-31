@@ -1,0 +1,7 @@
+# Pinned at the versions these results were produced with (see results/ENVIRONMENT.md).
+# Python 3.8.20. detectron2 and cityscapesscripts are NOT needed --
+# they are stubbed at import time (see VERIFICATION.md check 6).
+numpy==1.23.5
+scipy==1.9.1
+torch==2.2.2
+nltk==3.9.1

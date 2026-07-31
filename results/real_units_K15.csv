@@ -1,3 +1,5 @@
+# SUPERSEDED by results/alpha_sweep_K15.csv. M=2,547 tokens, activation range alpha=0 (threshold at 0, density ~0.50). At that density the all-firing formula scores IoU=density, so these IoUs are ~1.01x chance and are not explanation-quality measurements. Cited by diary D5.2.
+# Read with: pandas.read_csv(path, comment='#')
 arm,categories,neuron,density,length,beam,mean_overlap,common_frac,disjoint_pairs,peak_frontier,halted,visited,expanded,estimated,best_iou,time_s
 all categories (token regime),lemma+tag+dep+ent+synset+const,unit88,0.64,4,none,3.178,0.814,110,20062,no,8267,6654,62135,0.6489,172.41
 all categories (token regime),lemma+tag+dep+ent+synset+const,unit92,0.626,4,none,3.178,0.814,110,13456,no,5978,6711,62794,0.6154,98.77

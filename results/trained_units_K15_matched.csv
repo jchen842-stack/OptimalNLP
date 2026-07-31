@@ -1,3 +1,5 @@
+# SUPERSEDED by results/alpha_sweep_K15.csv. M=2,547, alpha=0, density band [0.39,0.65]. Density-matched fix of trained_units_K15.csv, but still at the wrong activation range. Cited by diary D5.3.
+# Read with: pandas.read_csv(path, comment='#')
 arm,categories,neuron,density,length,beam,mean_overlap,common_frac,disjoint_pairs,peak_frontier,halted,visited,expanded,estimated,best_iou,time_s
 all categories (token regime),lemma+tag+dep+ent+synset+const,unit109,0.536,4,none,3.178,0.814,110,17724,no,5271,7206,67046,0.5304,86.55
 all categories (token regime),lemma+tag+dep+ent+synset+const,unit115,0.529,4,none,3.178,0.814,110,14881,no,3905,7098,65998,0.5331,49.95

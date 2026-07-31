@@ -20,6 +20,7 @@ import sys
 from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import env_info  # noqa: E402
 import real_token_masks as rtm  # noqa: E402
 
 
@@ -66,6 +67,7 @@ def main():
     ap.add_argument("--min_support", type=int, default=5)
     ap.add_argument("--out", default="results/unique_elements.csv")
     args = ap.parse_args()
+    env_info.print_banner('unique-elements')
 
     rows = [analyse(args.feats, n, args.K, args.min_support) for n in args.sizes]
 

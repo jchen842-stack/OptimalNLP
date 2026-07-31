@@ -27,9 +27,14 @@ synthetic generator, and it isolates overlap while holding the masks real in bot
 
 import argparse
 import csv
+import os
+import sys
 from collections import Counter
 
 import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import env_info  # noqa: E402
 
 # Field order after the token text itself, per the .feats header line.
 CATEGORIES = ["lemma", "tag", "dep", "ent", "synset", "const"]
@@ -152,6 +157,7 @@ def main():
     ap.add_argument("--min_support", type=int, default=5, help="drop concepts rarer than this")
     ap.add_argument("--out", default="results/real_token_stats.csv")
     args = ap.parse_args()
+    env_info.print_banner('masks')
 
     tokens = load_tokens(args.feats, args.max_sents)
     print(f"[real] loaded {len(tokens)} tokens from {args.max_sents} sentences\n", flush=True)

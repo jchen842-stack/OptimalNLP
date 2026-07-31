@@ -11,3 +11,7 @@ models/*
 !models/README.md
 *.pth
 *.pt
+# corpora and checkpoints live outside the repo (see REPRODUCE.md)
+*.feats
+snli_1.0*/
+*.jsonl

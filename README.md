@@ -184,3 +184,65 @@ meta-path finder, so it runs on a bare CPU container without those installed.
 Keep the PVC only for the Cityscapes data + activation cache; none of *this* repo depends on
 it. To migrate: push this repo to your own GitHub, then `setup_pod.sh` against a pod in the
 new namespace.
+
+---
+
+## Start here (first-time reader)
+
+Added D5.5. Everything above remains accurate; this section is the reading order and the
+current status of the numbers.
+
+### The four scripts
+
+| script | what it does |
+|---|---|
+| `src/real_token_masks.py` | parses `snli_1.0_dev.feats` into (K, M) concept masks over tokens; overlap and unique-element diagnostics |
+| `src/real_activations.py` | runs the SNLI encoder for per-token activations, binarised at one or more activation ranges (`--alphas`) |
+| `src/real_token_search.py` | runs the optimal (or beam) search against those masks and neurons — the main experiment driver |
+| `src/train_snli_encoder.py` | trains the Bowman SNLI classifier behind the trained arm (provenance in `models/README.md`) |
+
+Reporting: `src/alpha_sweep_report.py`, `src/phaseB_report.py`, `src/corrected_metrics.py`,
+`src/unique_elements.py`, `src/env_info.py`.
+
+### Where results live
+
+- **`results/MANIFEST.md`** — one line per results file: what produced it, which diary entry
+  it belongs to, and whether it is current or **superseded**. Several CSVs cited by D5.1–D5.4
+  are superseded and carry a `#` header saying so; read those with
+  `pandas.read_csv(path, comment='#')`.
+- **`results/METHOD_NOTES.md`** — pre-registered predictions and their outcomes, plus the
+  recurring methodological errors found in this project. **Read this before quoting any
+  number from `results/`.**
+- `VERIFICATION.md` — the correctness audit. `REPRODUCE.md` — running it from a clean clone,
+  and every input that is not in the repo. `results/ENVIRONMENT.md` — pinned versions.
+- `tests/test_bruteforce_oracle.py` — exhaustive oracle over the formula space.
+  `verify/` — the audit scripts.
+
+### Status of the numbers
+
+The D5.1–D5.4 IoU results are **superseded**. They were measured at an activation range of
+alpha=0 (threshold at 0), which for a tanh-bounded LSTM state gives density ~0.50; at that
+density the all-firing formula scores IoU = 0.5 by construction, so those IoUs sit ~1.01x
+above chance and are not explanation-quality measurements. The corpus also grew from 2,547
+to 24,199 tokens. Current results are the alpha sweep and the beam-vs-exact grids listed in
+`results/MANIFEST.md`.
+
+### What has and has not been verified
+
+Eight independent checks pass (`VERIFICATION.md`), each recomputing a quantity a second way
+rather than re-reading the code that produced it: token-order alignment against a separate
+parser; padding correctness against unpadded single-sentence runs, with a working negative
+control; the `MAX_FRONTIER_SIZE` patch being bit-identical to clean upstream when disabled;
+our IoU matching upstream's `metrics.iou` to full float precision; masks matching hand-parsed
+raw annotation lines; no vision-stub code executing on the NLP path; the checkpoint
+re-evaluating to its stored 0.7934 dev accuracy exactly; and per-unit binarisation. On top of
+that, `tests/test_bruteforce_oracle.py` exhaustively enumerates the formula space and
+confirms the search returns the true optimum — validating the quantity helpers and the
+heuristic end to end without a second implementation.
+
+**Not verified:** the beam path (`MAX_FRONTIER_SIZE = 200`) has no independent reference and
+is checked only at the `None` setting; the original training seed is unrecoverable from
+surviving artifacts; untrained-arm weights depend on the torch RNG and hence the torch
+version, which was not recorded for the original runs (it is now); and which length-4 runs
+hit the time budget is machine-dependent, so the exact n for those statistics will differ on
+other hardware.

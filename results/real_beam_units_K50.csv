@@ -1,3 +1,5 @@
+# SUPERSEDED. M=2,547, alpha=0 real units, beam sweep at K=50.
+# Read with: pandas.read_csv(path, comment='#')
 arm,categories,neuron,density,length,beam,mean_overlap,common_frac,disjoint_pairs,peak_frontier,halted,visited,expanded,estimated,best_iou,time_s
 all categories (token regime),lemma+tag+dep+ent+synset+const,unit89,0.527,4,100,4.204,0.977,1954,291,no,11,311,12512,0.4383,0.69
 all categories (token regime),lemma+tag+dep+ent+synset+const,unit89,0.527,4,200,4.204,0.977,1954,391,no,65,690,27768,0.5257,1.54

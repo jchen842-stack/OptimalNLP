@@ -36,6 +36,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from synthetic_overlap_sweep import (  # noqa: E402
     HeapProbe, StubConfig, compute_disjoint_info, compute_quantities, _Halt,
 )
+import env_info  # noqa: E402
 import real_token_masks as rtm  # noqa: E402
 
 import heapq  # noqa: E402
@@ -321,6 +322,7 @@ def main():
     ap.add_argument("--dmax", type=float, default=0.85, help="max unit density to consider")
     ap.add_argument("--out", default="results/real_token_search.csv")
     args = ap.parse_args()
+    env_info.print_banner('real-search')
 
     tokens = rtm.load_tokens(args.feats, args.max_sents)
     print(f"[real-search] {len(tokens)} tokens | K={args.K} cap={args.cap} "

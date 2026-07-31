@@ -35,13 +35,52 @@ import importlib.abc
 import importlib.machinery
 
 
+class _Poison:
+    """A stubbed vision symbol. Binding it is fine; USING it raises.
+
+    `__getattr__` cannot raise directly: `from detectron2.data import DatasetCatalog`
+    resolves through it, so raising there aborts the import chain the stub exists to
+    satisfy (verified -- it fails at utils/dataset_utils.py:8). Returning a value that
+    raises on use gives the fail-loudly behaviour without breaking import.
+
+    Previously this returned the builtin `object`, so a stubbed `SomeClass()` silently
+    produced a plain instance instead of failing.
+    """
+
+    __slots__ = ("_where",)
+
+    def __init__(self, where):
+        object.__setattr__(self, "_where", where)
+
+    def _die(self, how):
+        raise ImportError(
+            f"stubbed vision dependency actually used: {object.__getattribute__(self, '_where')} "
+            f"({how}). The NLP path is not supposed to touch detectron2/cityscapesscripts; "
+            f"if you are on a vision path, install the real dependency.")
+
+    def __getattr__(self, name):
+        self._die(f"attribute {name!r}")
+
+    def __call__(self, *a, **k):
+        self._die("called")
+
+    def __iter__(self):
+        self._die("iterated")
+
+    def __getitem__(self, k):
+        self._die(f"subscripted [{k!r}]")
+
+    def __repr__(self):
+        return f"<stub {object.__getattribute__(self, '_where')}>"
+
+
 class _AnyModule(types.ModuleType):
-    """A stub module: any attribute (or submodule) resolves to a dummy object."""
+    """A stub module: any attribute (or submodule) resolves to a poison object."""
 
     __path__ = []  # marks it as a package so submodule imports are attempted
 
     def __getattr__(self, name):
-        return object
+        return _Poison(f"{self.__name__}.{name}")
 
 
 _STUB_PREFIXES = ("detectron2", "cityscapesscripts")
