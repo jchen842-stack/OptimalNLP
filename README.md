@@ -14,7 +14,7 @@ annotations (`lemma`, `tag`, `dep`, `ent`, `synset`, `const`).
 |---|---|
 | `src/` | the harness — masks, activations, search, reporting (see the table below) |
 | `results/` | every CSV and report. **Start at [`results/MANIFEST.md`](results/MANIFEST.md)** |
-| `diary/` | the research narrative, D5 through D5.5, including corrections made in place |
+| `diary/` | the research narrative, D5 through D5.5 — start at [`diary/README.md`](diary/README.md) for the index and what is superseded |
 | `verify/` | the correctness audit scripts, plus `run_all.sh` |
 | `tests/` | the brute-force oracle over the formula space |
 | `patches/` | the one upstream diff (`MAX_FRONTIER_SIZE`), against `70805299` |
@@ -137,6 +137,7 @@ REPRODUCE.md                     running it from a clean clone
 requirements.txt                 pinned dependency versions
 patches/0001-frontier-beam-fallback.patch   the fix, vs upstream 70805299
 results/*.csv                    recorded experiment outputs
+diary/README.md                  diary index: every entry, what it revises, what is superseded
 diary/summer_d5.md               research diary (synthetic reproduction + fix)
 diary/summer_d5.1.md             research diary (real SNLI token masks; revises D5)
 diary/summer_d5.2.md             research diary (real neuron activations; revises D5.1)

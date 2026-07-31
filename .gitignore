@@ -18,3 +18,5 @@ snli_1.0*/
 
 # clean upstream clone provisioned by verify/run_all.sh for the patch no-op check
 .upstream-clean/
+# rendered diary output; .md is the source (scripts/make_diary_docx.sh regenerates)
+*.docx
