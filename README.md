@@ -237,11 +237,20 @@ our IoU matching upstream's `metrics.iou` to full float precision; masks matchin
 raw annotation lines; no vision-stub code executing on the NLP path; the checkpoint
 re-evaluating to its stored 0.7934 dev accuracy exactly; and per-unit binarisation. On top of
 that, `tests/test_bruteforce_oracle.py` exhaustively enumerates the formula space and
-confirms the search returns the true optimum — validating the quantity helpers and the
-heuristic end to end without a second implementation.
+confirms the search returns the true optimum **of the space the method can construct** —
+validating the quantity helpers and the heuristic end to end without a second
+implementation.
+
+That oracle also surfaced a property of the upstream method: `expand_node` only ever appends
+a bare literal, and negation only ever appears as AND-NOT, so `OR NOT` and compound right
+children are unreachable. At length 3 this costs nothing measurable; at length 4 it costs
++0.16% IoU on one of the units tested. No reported number changes — the search is optimal in
+its own space — but "exact search" means *optimal within the method's formula grammar*. See
+`VERIFICATION.md` check 10 and `results/METHOD_NOTES.md`.
 
 **Not verified:** the beam path (`MAX_FRONTIER_SIZE = 200`) has no independent reference and
-is checked only at the `None` setting; the original training seed is unrecoverable from
+is checked only at the `None` setting; the expressiveness gap above is measured on three
+cases at one length, not characterised; the original training seed is unrecoverable from
 surviving artifacts; untrained-arm weights depend on the torch RNG and hence the torch
 version, which was not recorded for the original runs (it is now); and which length-4 runs
 hit the time budget is machine-dependent, so the exact n for those statistics will differ on

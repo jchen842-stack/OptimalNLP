@@ -355,18 +355,65 @@ why `real_activations.py` takes `stoi` from the checkpoint and prints the rate.
    The guarantee comes from `enforce_sorted=False` in upstream's `get_states`, not from our
    assertion. If upstream ever changed that, `verify_alignment` would not notice.
 
-## 10. Brute-force oracle — PASS
+## 10. Brute-force oracle — PASS, and it found something
+
+The oracle asserts the search returns the true optimum **of the space `expand_node` can
+construct**. It also measures, separately, how much IoU that space leaves on the table.
 
 Closes the gap flagged under check 4. Rather than reimplement the quantity helpers, the
 oracle enumerates the **entire formula space** and scores every formula with plain numpy —
 no heuristic, no frontier, no shared helpers — then asserts the max equals what the search
 returns.
 
-The enumeration is over **masks**, not trees, so associativity and commutativity collapse
-for free: `L1 = {c, ~c}` (30 literals at K=15), `L(n) = {a op b}` for `op` in {AND, OR}.
-NOT applies only to leaves, matching `formula.Not.__init__`'s assertion, and "length" is
-the leaf count, matching `formula.F.__len__`. That makes it a superset of what the search
-explores, so equality is a genuine end-to-end validation.
+Two spaces are enumerated.
+
+**In-grammar** — exactly what `expand_node` (`optimal.py:554-582`) can build. Candidate
+labels are plain leaves and there are only three moves:
+
+```python
+next_op == "OR"  -> F.Or(label, leaf)
+next_op == "AND" -> F.And(label, leaf)
+next_op == "NOT" -> F.And(label, F.Not(leaf))
+```
+
+So formulas are **left-deep** (the right child is always a bare literal), negation appears
+**only as AND-NOT**, there is **no OR-NOT**, and the leftmost term is never negated. This is
+the assertion target: the search must equal this max.
+
+**Unrestricted** — all trees over literals with AND/OR and NOT on leaves, enumerated over
+**masks** rather than trees so associativity and commutativity collapse for free. A strict
+superset. The search is *not* expected to reach it; the difference is reported as the
+**expressiveness gap**.
+
+### The length-4 finding
+
+At length 3 the two spaces coincide on every case tested (gap +0.0000%) and everything
+matches. **At length 4 they diverge**, which the first version of this oracle reported as a
+FAIL before the cause was diagnosed:
+
+| case | in-grammar max = search | unrestricted max | gap |
+|---|---|---|---|
+| trained unit88 a=0.1 | `0.19102002503128912` | `0.19102002503128912` | +0.0000% |
+| untrained unit92 a=0.1 | `0.19492814877430262` | `0.19523729099814222` | **+0.1586%** |
+| proxy | `0.8527409974013117` | `0.8527409974013117` | +0.0000% |
+
+The in-grammar enumeration reproduces the search's value to full precision **and recovers
+the identical formula string**, on both real units:
+
+```
+untrained unit92: (((tag=NN AND NOT const=VP) OR dep=punct) AND NOT tag=IN)
+trained  unit88: (((const=NP AND NOT const=PP) AND NOT tag=DT) AND NOT dep=punct)
+```
+
+So **the search is correct**. What it cannot reach is
+`(tag=NN AND (dep=ROOT OR NOT const=VP)) OR dep=punct`, which needs `OR NOT`. Isolated by
+running a left-deep enumeration that *permits* OR-NOT — that one reaches the unrestricted
+max exactly, while the enumeration that forbids it lands exactly on the search's value.
+**`OR-NOT` is the distinguishing move, not tree shape.** The 2+2 balanced shape, which only
+becomes reachable at length 4, is not involved.
+
+This is a property of the upstream method's formula grammar, not of this pipeline, and it is
+invisible at length 3 — which is the length the paper reports.
 
 ```sh
 python tests/test_bruteforce_oracle.py           # length 3

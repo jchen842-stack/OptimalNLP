@@ -18,6 +18,8 @@ Superseded CSVs carry two leading `#` comment lines naming their replacement. Re
 | `beam_vs_exact_K15.csv` | `src/real_token_search.py` → `src/phaseB_report.py` | D5.5 | Phase B, **length 4**. 27 pairs, 4 timed out (excluded from derived stats, n=23) |
 | `phaseB_report.txt` | `src/phaseB_report.py` | D5.5 | full printed output for the above, including the pre-registered verdicts |
 | `beam_vs_exact_L3_K15.csv` | `src/real_token_search.py` → `src/phaseB_report.py` | D5.5 | Phase B at **length 3**, matched to the paper's max length. 27 pairs, no timeouts |
+| `oracle_L3.txt` | `tests/test_bruteforce_oracle.py` | D5.5 | brute-force oracle at length 3. In-grammar max == search on all 3 cases; expressiveness gap +0.0000% |
+| `oracle_L4.txt` | `ORACLE_LENGTH=4 tests/test_bruteforce_oracle.py` | D5.5 | same at length 4. In-grammar max == search on all 3; expressiveness gap +0.1586% on untrained unit92 — the method's grammar cannot express `OR NOT` |
 | `phaseB_report_L3.txt` | `src/phaseB_report.py` | D5.5 | full printed output for the length-3 grid; contains the band comparison |
 
 ## Synthetic baselines — still valid, not superseded

@@ -5,7 +5,23 @@ This validates the WHOLE pipeline end to end -- concept masks, the quantity help
 the admissible heuristic, the frontier, and the returned optimum -- without writing a second
 implementation of any of it. It only needs plain numpy set operations and a max.
 
-Space enumerated (matching what the search can return):
+TWO spaces are enumerated, and the difference between them is itself a finding.
+
+**Grammar space** -- exactly what `expand_node` (optimal.py:554-582) can construct. The
+candidate labels are plain leaves and the only three moves are
+`Or(label, leaf)`, `And(label, leaf)`, `And(label, Not(leaf))`. So formulas are left-deep
+(the right child is always a bare literal), negation appears only as AND-NOT, there is no
+OR-NOT, and the leftmost term is never negated. **The search must equal this max** -- that
+is the correctness assertion.
+
+**Unrestricted space** -- all trees over literals with AND/OR, NOT on leaves. A strict
+superset. The search is NOT expected to reach this; the difference measures how much IoU the
+method's grammar leaves on the table (see `EXPRESSIVENESS GAP` below). At length 3 the two
+coincide on every case tested; at length 4 they diverge -- untrained unit92 reaches
+0.19523729099814222 unrestricted vs 0.19492814877430262 in-grammar, a formula needing
+`OR NOT`.
+
+Unrestricted space enumerated as:
   * a "length" is the number of LEAVES (formula.F.__len__ sums leaves; Not delegates to its
     child, so NOT is free);
   * NOT applies only to leaves (`formula.Not.__init__` asserts `isinstance(val, Leaf)`);
@@ -90,23 +106,51 @@ def best_iou_bruteforce(dense, neuron, length, chunk=64):
     return best, total
 
 
+def grammar_max(dense, neuron, length):
+    """Max IoU over EXACTLY the space expand_node can build. This is the assertion target."""
+    K = dense.shape[0]
+
+    def iou(m):
+        inter = (m & neuron).sum()
+        union = (m | neuron).sum()
+        return inter / union if union else 0.0
+
+    cur = {dense[i].tobytes(): dense[i] for i in range(K)}
+    best = max(iou(m) for m in cur.values())
+    for _ in range(2, length + 1):
+        nxt = {}
+        for m in cur.values():
+            for i in range(K):
+                for new in (m | dense[i], m & dense[i], m & ~dense[i]):
+                    nxt.setdefault(new.tobytes(), new)
+        best = max(best, max(iou(m) for m in nxt.values()))
+        cur = nxt
+    return float(best)
+
+
 def run_case(label, dense, concepts, neuron, length):
     oracle, n_forms = best_iou_bruteforce(dense, neuron, length)
+    gram = grammar_max(dense, neuron, length)
     res = rts.run_one(dense, neuron, length, cap=200000, time_budget=1500,
                       beam_cap=None, concepts=concepts)
     search = res["best_iou"]
     # run_one rounds to 4dp for the CSV; recover full precision from the counts it kept.
     exact = res["n_inter"] / (res["n_fires"] + int(neuron.sum()) - res["n_inter"])
-    ok = abs(exact - oracle) < 1e-12
+    ok = abs(exact - gram) < 1e-12
     print(f"\n--- {label} (length {length}) ---")
-    print(f"  masks evaluated           : {n_forms:,} (top level streamed, not deduped)")
-    print(f"  brute-force max IoU       : {oracle!r}")
-    print(f"  search best_iou           : {exact!r}")
-    print(f"  search formula            : {res['formula']}")
-    print(f"  |difference|              : {abs(exact - oracle):.3e}")
-    print(f"  {'MATCH' if ok else 'MISMATCH -- STOP, do not adjust anything'}")
+    print(f"  masks evaluated              : {n_forms:,} (top level streamed, not deduped)")
+    print(f"  IN-GRAMMAR max IoU (assert)  : {gram!r}")
+    print(f"  search best_iou              : {exact!r}")
+    print(f"  search formula               : {res['formula']}")
+    print(f"  |difference|                 : {abs(exact - gram):.3e}")
+    verdict = ("MATCH -- search is optimal in its own space" if ok
+               else "MISMATCH -- STOP, do not adjust anything")
+    print(f"  {verdict}")
+    print(f"  unrestricted max IoU         : {oracle!r}")
+    print(f"  EXPRESSIVENESS GAP           : {100*(oracle-gram)/gram:+.4f}%  "
+          f"(what the method's grammar cannot express)")
     if exact > oracle + 1e-12:
-        print("  !! search exceeded the oracle: the enumeration is not a superset")
+        print("  !! search exceeded the unrestricted oracle: enumeration is not a superset")
     return ok
 
 

@@ -1,0 +1,33 @@
+K=15 M=24199  length=3
+
+--- trained unit88 a=0.1 (length 3) ---
+  masks evaluated              : 56,416 (top level streamed, not deduped)
+  IN-GRAMMAR max IoU (assert)  : 0.18162962962962964
+  search best_iou              : 0.18162962962962964
+  search formula               : ((const=NP AND (NOT const=PP)) AND (NOT tag=DT))
+  |difference|                 : 0.000e+00
+  MATCH -- search is optimal in its own space
+  unrestricted max IoU         : 0.18162962962962964
+  EXPRESSIVENESS GAP           : +0.0000%  (what the method's grammar cannot express)
+
+--- untrained unit92 a=0.1 (length 3) ---
+  masks evaluated              : 56,416 (top level streamed, not deduped)
+  IN-GRAMMAR max IoU (assert)  : 0.1947306198277318
+  search best_iou              : 0.1947306198277318
+  search formula               : ((tag=NN AND (NOT const=VP)) OR dep=punct)
+  |difference|                 : 0.000e+00
+  MATCH -- search is optimal in its own space
+  unrestricted max IoU         : 0.1947306198277318
+  EXPRESSIVENESS GAP           : +0.0000%  (what the method's grammar cannot express)
+
+--- proxy neuron (length 3) ---
+  masks evaluated              : 56,416 (top level streamed, not deduped)
+  IN-GRAMMAR max IoU (assert)  : 0.8527409974013117
+  search best_iou              : 0.8527409974013117
+  search formula               : ((dep=det OR tag=IN) OR dep=prep)
+  |difference|                 : 0.000e+00
+  MATCH -- search is optimal in its own space
+  unrestricted max IoU         : 0.8527409974013117
+  EXPRESSIVENESS GAP           : +0.0000%  (what the method's grammar cannot express)
+
+RESULT: PASS

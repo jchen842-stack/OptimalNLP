@@ -601,3 +601,68 @@ the vision result in a new domain — after the post-hoc reach had produced some
 looked favourable and would not have survived scrutiny. The rigour was not a cost paid for
 honesty; it produced the stronger and more defensible result. The post-hoc median would have
 been indefensible *and* would have understated what the data actually supports.
+
+---
+
+## Finding: the method's formula grammar is narrower than "length 4 over K concepts"
+
+Found 2026-07-31 by the brute-force oracle (`tests/test_bruteforce_oracle.py`,
+`VERIFICATION.md` check 10), which was written to validate our pipeline and instead
+surfaced a property of the upstream method.
+
+`expand_node` (`optimal.py:554-582`) grows a formula by exactly three moves, with
+`candidate_labels` being plain leaves:
+
+```python
+next_op == "OR"  -> F.Or(label, leaf)
+next_op == "AND" -> F.And(label, leaf)
+next_op == "NOT" -> F.And(label, F.Not(leaf))
+```
+
+Three consequences, none of them documented upstream:
+
+1. Formulas are **left-deep** — the right child is always a bare literal, so
+   `A AND (B OR C)` is not constructible as a subterm.
+2. Negation appears **only as AND-NOT**. There is no `OR NOT`.
+3. The leftmost term is **never negated**.
+
+At length 3 this costs nothing on any case tested: the in-grammar max equals the
+unrestricted max exactly, on both real units and the proxy. **At length 4 it costs
++0.1586% IoU on untrained unit92** — the unrestricted optimum is
+`(tag=NN AND (dep=ROOT OR NOT const=VP)) OR dep=punct`, and the search returns
+`(((tag=NN AND NOT const=VP) OR dep=punct) AND NOT tag=IN)`.
+
+The distinguishing move is **OR-NOT**, isolated by running a left-deep enumeration that
+permits it (reaches the unrestricted max exactly) against one that forbids it (lands exactly
+on the search's value). Tree shape is not involved — the balanced 2+2 shape that first
+becomes reachable at length 4 plays no part.
+
+### What this does and does not change
+
+**Does not change any reported number.** Every result in `results/` is what the search
+returns, and the search is optimal within the space it constructs — the oracle confirms that
+to full precision, recovering the identical formula string.
+
+**Does change the wording.** "Exact search" should read "optimal within the method's
+formula grammar". The length-4 beam-vs-exact gap is a gap to the *in-grammar* optimum, not
+to the unrestricted optimum, so it slightly understates what a richer grammar could buy.
+
+**The length-3 results are untouched in both senses** — the gap is +0.0000% there, so at the
+paper's own max length the distinction does not arise. That includes the +5.05% matched-length
+band comparison, which is the headline.
+
+### How this was nearly mis-reported
+
+The first oracle run flagged this as `MISMATCH -- STOP` and the initial reading was "the
+search missed its own optimum", i.e. a bug in the pipeline. Two intermediate hypotheses were
+also wrong:
+
+1. *"The winner is a 2+2 balanced tree the oracle invented."* Falsified — the winning shapes
+   are 1+3 / 3+1.
+2. *"It is left-deep-ness."* Falsified — a left-deep enumeration reached the unrestricted max,
+   because that enumeration still permitted OR-NOT.
+
+Only the third model, enumerating the exact three moves the code emits, matched. The general
+lesson is the same one recorded above under *diagnostics that inherit the confound they were
+built to detect*: an oracle is only as good as its model of the thing it is checking, and the
+first two models were built by reading the formula classes rather than the expansion function.
