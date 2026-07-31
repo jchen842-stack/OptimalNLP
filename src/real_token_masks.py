@@ -122,11 +122,19 @@ def diagnostics(dense):
     disjoint_pairs = int((co == 0).sum())
     total_pairs = K * (K - 1)
 
+    # Unique-element fraction, the paper's §4.3 variable: tokens carrying exactly one
+    # admitted concept. Distinct from disjoint PAIRS, which is a property of the concept
+    # vocabulary rather than of the elements; the heuristic degrades against this one.
+    unique_tokens = int((sum_elements == 1).sum())
+
     return {
         "K": K,
         "M": M,
         "active_tokens": active,
         "coverage": round(active / max(M, 1), 3),
+        "unique_tokens": unique_tokens,
+        "unique_frac_all": round(unique_tokens / max(M, 1), 3),
+        "unique_frac_active": round(unique_tokens / max(active, 1), 3),
         "mean_overlap": round(mean_overlap, 3),
         "common_frac": round(common_frac, 3),
         "disjoint_pairs": disjoint_pairs,

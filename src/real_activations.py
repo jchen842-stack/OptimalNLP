@@ -135,6 +135,9 @@ def main():
     ap.add_argument("--ckpt", default=None, help="Bowman SNLI checkpoint, e.g. models/bowman_snli/6.pth")
     ap.add_argument("--alpha", type=float, default=None,
                     help="top-fraction threshold per unit; omit for the upstream >0 default")
+    ap.add_argument("--alphas", type=float, nargs="+", default=None,
+                    help="sweep several alphas from ONE forward pass; --out is treated as a "
+                         "template and gets an _a<alpha> suffix per value")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default="results/real_activations.npz")
     args = ap.parse_args()
@@ -169,15 +172,21 @@ def main():
     n_tokens = verify_alignment(sents, states)
     print(f"[acts] states {states.shape} — aligned to {n_tokens} mask tokens")
 
-    acts = binarize(states, args.alpha)
-    density = acts.mean(axis=1)
-    print(f"[acts] binarized {acts.shape} (n_units, n_tokens) | alpha={args.alpha}")
-    print(f"[acts] density per unit: mean {density.mean():.3f} "
-          f"min {density.min():.3f} max {density.max():.3f}")
-
-    np.savez_compressed(args.out, acts=acts, density=density,
-                        untrained=args.untrained, alpha=args.alpha if args.alpha else -1)
-    print(f"wrote {args.out}")
+    # The forward pass does not depend on alpha -- only the binarization does -- so a sweep
+    # reuses one set of states rather than re-running the encoder per alpha.
+    alphas = args.alphas if args.alphas is not None else [args.alpha]
+    base, ext = os.path.splitext(args.out)
+    for alpha in alphas:
+        acts = binarize(states, alpha)
+        density = acts.mean(axis=1)
+        fired = acts.sum(axis=1)
+        out = args.out if args.alphas is None else f"{base}_a{alpha}{ext}"
+        print(f"[acts] alpha={alpha} -> {acts.shape} | density mean {density.mean():.4f} "
+              f"min {density.min():.4f} max {density.max():.4f} | firing tokens/unit: "
+              f"mean {fired.mean():.1f} min {int(fired.min())} max {int(fired.max())}")
+        np.savez_compressed(out, acts=acts, density=density,
+                            untrained=args.untrained, alpha=alpha if alpha else -1)
+        print(f"wrote {out}")
 
 
 if __name__ == "__main__":
