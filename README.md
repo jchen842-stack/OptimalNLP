@@ -125,18 +125,37 @@ src/real_token_masks.py          real SNLI token concept masks + overlap statist
 src/real_token_search.py         optimal search on real token masks (wall + beam fix)
 src/real_activations.py          real per-token unit activations (Bowman encoder)
 src/train_snli_encoder.py        train the Bowman SNLI classifier (0.7934 dev)
+src/unique_elements.py           unique-element fraction (the paper's 4.3 variable)
+src/corrected_metrics.py         lift / normalised fit / coverage-matched IoU null
+src/alpha_sweep_report.py        Phase A report over the activation-range sweep
+src/phaseB_report.py             beam-vs-exact join, band comparison, prediction scoring
+src/env_info.py                  environment capture -> results/ENVIRONMENT.md
+verify/*.py, verify/run_all.sh   correctness audit; run_all.sh prints a PASS/FAIL table
+tests/test_bruteforce_oracle.py  exhaustive oracle over the formula space
+VERIFICATION.md                  the audit
+REPRODUCE.md                     running it from a clean clone
+requirements.txt                 pinned dependency versions
 patches/0001-frontier-beam-fallback.patch   the fix, vs upstream 70805299
 results/*.csv                    recorded experiment outputs
 diary/summer_d5.md               research diary (synthetic reproduction + fix)
 diary/summer_d5.1.md             research diary (real SNLI token masks; revises D5)
 diary/summer_d5.2.md             research diary (real neuron activations; revises D5.1)
 diary/summer_d5.3.md             research diary (trained neurons; revises D5.2)
+diary/summer_d5.4.md             research diary (IoU was tracking density; revises D5.2/D5.3)
+diary/summer_d5.5.md             research diary (activation range corrected + audit; revises D5.4)
 infra/{pvc,pod,pod-cpu}.yaml      Nautilus manifests
 scripts/setup_pod.sh             clone upstream + apply patch + sync harness into a pod
 UPSTREAM                         pinned upstream commit
 ```
 
 ## The result in one paragraph
+
+⚠️ **Throughout this file, "optimal search" means optimal *within the method's formula
+grammar*** (D5.5 §4). `expand_node` only ever appends a bare literal, so formulas are
+left-deep, negation appears only as AND-NOT, and there is no `OR NOT`. A brute-force oracle
+confirms the search attains the in-grammar optimum exactly; what the grammar cannot express
+costs **+0.0000% at length 3** and **+0.1586% at length 4** on the cases tested
+(`VERIFICATION.md` check 10).
 
 Under vision's disjoint concepts the optimal search is cheap at any scale; under token-like
 concept **overlap** the disjoint fast-path vanishes, admissible ceilings stop separating
@@ -174,13 +193,23 @@ So the regime shift is a property of NLP annotation, not of our generator.
 3. **But real overlap is block-structured, and that matters.** Concepts within a category are
    mutually exclusive, so ~half the concept pairs stay disjoint (110/210 at K=15) where the
    synthetic generator drove disjoint pairs to 0, so the disjoint fast-path partially survives.
+   ⚠️ **Qualified by D5.5 §1.** `disjoint_pairs` is a property of the *vocabulary*. The
+   paper's §4.3 variable is the fraction of *elements* carrying exactly one concept, which is
+   **13.9%** (not ~51%) and *falls* as the corpus grows, while disjoint_pairs stays flat. The
+   two statistics point opposite ways; the element-level one is the binding statistic.
    ⚠️ **Partly superseded by D5.2.** This point originally continued: "and at K=15/length=4 the
    real search terminates in 6.5 s where synthetic predicted a timeout." That held only for the
    *proxy* neuron. With real unit activations the same case runs 14 s → non-termination
    (1 of 5 units), so the tractability gain was substantially the easy target, not the block
    structure. The block structure is real; its share of the effect was overstated. See
    [`diary/summer_d5.2.md`](diary/summer_d5.2.md).
-4. **The wall is nonetheless real**, and it arrives on the K axis (`results/real_K{30,50}.csv`):
+4. ⚠️ **Superseded by D5.5 §3 — the wall is on the LENGTH axis, not the K axis.** At
+   M=24,199, exact search at length 3 terminates in 4.7–8.5 s even at K=50 all-categories,
+   while length 4 at K=15 takes 200–1,500 s with 4 timeouts. K=15→50 at length 3 costs ~4x;
+   length 3→4 at K=15 costs 100x or more. The table below is at M=2,547 with a proxy neuron
+   and stands as measured; its *reading* — that K is the binding axis — does not.
+
+   **The wall is nonetheless real**, and it arrives on the K axis (`results/real_K{30,50}.csv`):
 
    | K (all categories, length 4) | peak frontier | time | terminates |
    |---|---|---|---|
@@ -193,7 +222,9 @@ So the regime shift is a property of NLP annotation, not of our generator.
    is starker than any ratio — at identical K and length the disjoint search visits two nodes
    and finishes, while the overlapping one never terminates.
 5. **The beam fallback rescues the real wall** (`results/real_beam_K50.csv`), and more cleanly
-   than on synthetic data — quality plateaus early instead of wobbling:
+   than on synthetic data — quality plateaus early instead of wobbling. (Proxy neuron,
+   M=2,547; the IoUs here are not affected by the density problem in the note above, because
+   the proxy's density is 0.43, but they are proxy numbers and not real-unit numbers.)
 
    | beam | time | IoU | terminates |
    |---|---|---|---|
@@ -215,6 +246,16 @@ So the regime shift is a property of NLP annotation, not of our generator.
   the token axis. D5.3 then trained a Bowman SNLI classifier to **0.7934** dev accuracy
   (`src/train_snli_encoder.py`) and reran with trained units. At K=15/length=4:
 
+  ⚠️ **Superseded by D5.4 — the "best IoU" column below is WITHDRAWN, and so is the
+  conclusion drawn from it two paragraphs down.** These IoUs were measured with the
+  activation range at alpha=0 (threshold at 0), giving density ~0.50. At that density the
+  "fire on everything" formula scores IoU = density by construction, and every value below
+  sits ~1.01x that: the number is the density, not the fit. The winning formulas were
+  high-coverage blankets, e.g. `(((const=NP OR const=VP) OR dep=nsubj) OR dep=punct)` at
+  coverage 0.956. **The frontier and time columns are unaffected** — they do not depend on
+  the IoU. Corrected at a proper activation range (D5.5 §2), trained lift reaches 3.41 and
+  the trained arm *separates* from untrained.
+
   | neuron | frontier (med) | time (med) | best IoU (med) | timeouts |
   |---|---|---|---|---|
   | proxy | 3,085 | 6.5 s | 0.905 | 0/1 |
@@ -224,6 +265,15 @@ So the regime shift is a property of NLP annotation, not of our generator.
   **Trained neurons land next to untrained, not next to the proxy** — the proxy is a 5×
   frontier / 13× time outlier against a properly trained model. That gap is an order of
   magnitude larger than the noise and is the robust finding here.
+  ⚠️ **Superseded by D5.4/D5.5 — the paragraph below is right about the conclusion and wrong
+  about the reason, and its own supporting numbers are withdrawn.** The 600-unit
+  density-matched test (trained 0.431 vs untrained 0.420, p=0.008) compares IoUs at
+  density ~0.50 and is therefore comparing densities. And the final claim — that the concept
+  **vocabulary** is the binding constraint — is **unsupported**: the binding constraint was
+  the activation range. At alpha=0.05 the trained arm reaches lift 3.41 against untrained
+  2.07, where at alpha=0.5 the two are indistinguishable. The D5.3 question is reopened with
+  an instrument that works (D5.5 §2, §5).
+
   **The trained-vs-untrained difference is not established.** At n=5 per arm neither the 17%
   frontier gap nor the search-IoU gap (0.530 vs 0.611) survives scrutiny: the untrained arm has
   one censored timeout, which biases its IoU mean upward, and a density-matched test over all
@@ -238,7 +288,9 @@ So the regime shift is a property of NLP annotation, not of our generator.
   `min_support`, so they cannot supply a K-matched control at K≥30; use the `lemma` arm there.
   An earlier 649× figure compared K=50 overlap against a K=23 control and is superseded by the
   187× K-matched number above.
-- 200 sentences (~2,547 tokens) were used to keep M near the synthetic M=2048.
+- 200 sentences (~2,547 tokens) were used to keep M near the synthetic M=2048. **Superseded:
+  the current corpus is 2,000 sentences / 24,199 tokens** (D5.5 §1), which is what makes the
+  paper's 0.005 activation range approachable at all.
 
 ```bash
 python src/real_token_masks.py                      # overlap statistics, all arms
@@ -247,6 +299,10 @@ python src/real_token_search.py --arms lemma all \
 ```
 
 ## Reproduce (current or a new namespace)
+
+*For local reproduction the canonical guide is now [`REPRODUCE.md`](REPRODUCE.md), which
+lists every input that is not in the repo and was tested from a clean clone. The pod/PVC
+workflow below remains accurate.*
 
 Everything is **CPU-only** — the optimal search is Python `heapq` + estimation over tiny
 boolean tensors; no GPU is needed (GPU only ever computed the vision activations, which the
@@ -274,7 +330,10 @@ kubectl exec $POD -- bash -lc '
   (validate the fix; the tradeoff curve).
 
 The harness stubs the upstream vision-only imports (`detectron2`, `cityscapesscripts`) via a
-meta-path finder, so it runs on a bare CPU container without those installed.
+meta-path finder, so it runs on a bare CPU container without those installed. The stubs now
+return objects that raise `ImportError` on any use, rather than the builtin `object` — so a
+stubbed symbol that is actually called fails loudly instead of silently returning a plain
+instance. Nothing on the NLP path touches them (`VERIFICATION.md` check 6).
 
 ## Cleanup / moving off the PVC
 

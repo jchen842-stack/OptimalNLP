@@ -2,6 +2,12 @@
 
 Written to be defensible in a meeting. Every claim has a `file:line` you can point at.
 
+> **Written 2026-07-31. All 98 `file:line` citations re-verified against commit `f1bace0`.**
+> Line numbers drift as the code changes; re-run
+> `python - <<'EOF'` … (or simply re-check the citations) after any edit to `src/`, so drift
+> is visible rather than silent. Upstream citations (`compositional/`, `utils/`, `models.py`)
+> are pinned at `70805299` and do not drift.
+
 **Path convention.** Two trees are involved:
 
 | prefix | tree | who wrote it |
@@ -174,7 +180,7 @@ replicates upstream's `utils/mask_utils.py:160-162` (see §2's last subsection).
 Three module globals are then swapped into upstream:
 
 ```
-src/real_token_search.py:240   optimal.heapq = probe          # frontier instrumentation
+src/real_token_search.py:237   optimal.heapq = probe          # frontier instrumentation
 src/real_token_search.py:253   optimal.expand_node = capped   # only if --expand_budget
 src/real_token_search.py:254   optimal.MAX_FRONTIER_SIZE = beam_cap   # None here (exact)
 ```
@@ -462,6 +468,15 @@ ancestor propagation — exists to *lower* ceilings and *raise* the threshold so
 comparison fires more often. Upstream even asserts the invariant explicitly at
 `optimal.py:401-404`: a node whose max IoU came out below the threshold raises `ValueError`,
 "This should not happen."
+
+> **What "the optimum" means here.** Optimal *within the method's formula grammar*.
+> `expand_node` only ever appends a bare literal (`optimal.py:554-582`), so formulas are
+> left-deep, negation appears only as AND-NOT, and there is **no `OR NOT`**. A brute-force
+> oracle over the unrestricted formula space confirms the search attains the in-grammar
+> optimum exactly — and measures what the grammar cannot express: **+0.0000% at length 3**
+> on all three cases tested, **+0.1586% at length 4** on one unit
+> (`tests/test_bruteforce_oracle.py`, `results/oracle_L{3,4}.txt`, `VERIFICATION.md` check 10).
+> No reported number changes; the wording does.
 
 **And this is precisely what the beam cap gives up.** `_apply_beam_cap` drops nodes whose
 ceiling is still above the threshold. That is not a sound prune, it is a heuristic one — the
