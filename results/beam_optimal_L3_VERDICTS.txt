@@ -1,0 +1,80 @@
+============================================================================================
+EXPERIMENT 2b — THE PAPER'S BEAM (compositional/beam_optimal.py) vs EXACT, length 3, K=15, 27 pairs
+============================================================================================
+
+--- PRE-REGISTERED PREDICTIONS ---
+
+C1  THE PAPER'S BEAM ALWAYS RETURNS A FORMULA.
+    Zero no-solution runs at every width including 5, against 8/27 for the frontier cap.
+    Why: `beam_search` ranks COMPLETE formulas by exact IoU and every leaf is a valid
+    length-1 formula, so the beam is non-empty after level 1 by construction.
+    This is the structural claim that makes 2a's correction correct. If it fails, the two
+    mechanisms are not as different as the correction says and that correction needs
+    revisiting.
+    SUPPORTED if no_solution == 0 at all six widths.
+
+C2  BEAM 5 REPRODUCES THE PAPER'S BAND.
+    Ratio-of-averages (exact over beam_optimal) at width 5, over all 27 pairs, lands
+    INSIDE +5.1% to +6.5%.
+    Why: this is the paper's own algorithm at the paper's own default beam size on the
+    paper's own statistic. If the vision result transfers to NLI at all, this is where it
+    should show up. The frontier cap gave +22.26% at width 5, so this predicts the
+    mechanism difference accounts for essentially the whole discrepancy.
+    SUPPORTED only if 5.1 <= roa_all(5) <= 6.5. Registered as a two-sided test on purpose:
+    2a showed a one-sided threshold cannot tell "small" from "broken".
+
+C3  THE PAPER'S BEAM DOMINATES THE FRONTIER CAP AT EVERY WIDTH.
+    At each of the six widths, beam_optimal's ratio-of-averages is SMALLER (a tighter gap)
+    than the frontier cap's on the same width, on the fixed 19-pair set from 2a.
+    This can fail. Ranking by exact IoU is greedier and could plateau early, whereas the
+    ceiling-ranked frontier is at least admissible-optimistic and might recover at wide
+    settings. A failure at beam 200 in particular would mean our published beam-200 numbers
+    are not the weaker approximation the correction assumes.
+    SUPPORTED if roa_beamopt(w) < roa_cap(w) at all six widths.
+
+C4  CONTROL — EXACT IS UNCHANGED.
+    The exact reference re-run here reproduces the exact_IoU column of
+    results/beam_vs_exact_L3_K15.csv to within 1e-6 on all 27 pairs, exactly as B4 did.
+    If this drifts, the two experiments are not measured against the same reference and
+    C1-C3 cannot be compared to 2a at all.
+
+C5  CONTROL — BEAM WIDTH >= EXACT'S VISITED COUNT MUST GIVE EXACT'S ANSWER... IS NOT
+    TESTABLE HERE, AND IS REGISTERED AS SUCH.
+    2a's B5 passed vacuously because its antecedent was never satisfied. The analogous
+    claim here would be that a beam wider than the whole level-wise search space returns
+    the optimum; at K=15 length 3 that space is 30,375 formulas and the widest swept beam
+    is 200, so the antecedent is again never satisfied. Registered in advance as UNTESTED
+    rather than run and reported as a pass.
+
+--- beam_optimal vs FRONTIER CAP (2a), side by side ---
+      beam |  bo_agree   bo_roa%  bo_nosol  band? |  cap_agree  cap_roa%  cap_nosol
+         5 |    19/27       0.71      0/27     out |      0/19      22.26       8/27
+        10 |    21/27       0.24      0/27     out |      0/19      22.08       3/27
+        25 |    23/27      -0.08      0/27     out |      2/19      18.52       2/27
+        50 |    24/27      -0.25      0/27     out |      3/19       7.30       0/27
+       100 |    25/27      -0.26      0/27     out |      9/19       5.31       0/27
+       200 |    25/27      -0.26      0/27     out |     16/19       0.57       0/27
+    cap columns are 2a's FIXED 19-pair set (its only valid statistic); bo columns are all 27.
+
+--- STRATIFIED WITHIN (arm, alpha) — beam_optimal ratio-of-averages % ---
+                 stratum   n      b5     b10     b25     b50    b100    b200
+           trained a=0.2   3   -0.23   -0.23   -0.23   -0.23   -0.23   -0.23
+           trained a=0.1   5    1.99    1.99    0.00    0.00    0.00    0.00
+          trained a=0.05   5    1.25   -1.56   -1.56   -1.56   -1.66   -1.66
+         untrained a=0.2   4    1.25    0.76    0.76    0.00    0.00    0.00
+         untrained a=0.1   5    0.00    0.00    0.00    0.00    0.00    0.00
+        untrained a=0.05   5    0.07    0.00    0.00    0.00    0.00    0.00
+
+--- VERDICTS ---
+  C1: SUPPORTED
+      0 no-solution runs across 162 (pair, width) runs; frontier cap had 13
+  C2: NOT SUPPORTED
+      roa_all(beam 5) = +0.71% vs band 5.1-6.5% -> BELOW; frontier cap at width 5 gave +22.26%
+  C3: SUPPORTED
+      beam_optimal roa vs cap roa by width: 5:+0.71 vs +22.26, 10:+0.24 vs +22.08, 25:-0.08 vs +18.52, 50:-0.25 vs +7.30, 100:-0.26 vs +5.31, 200:-0.26 vs +0.57; tighter at all six
+  C4: SUPPORTED
+      27 pairs checked against the committed exact_IoU; 0 mismatches
+  C5: UNTESTED BY CONSTRUCTION (registered as such in advance)
+      widest swept beam is 200; the level-wise space at K=15 length 3 is 30,375 formulas, so the antecedent is never satisfied. Not counted either way.
+
+  scored 3/4 SUPPORTED (C5 untested, excluded)

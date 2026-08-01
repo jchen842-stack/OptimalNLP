@@ -1,0 +1,10 @@
+K=15 M=24199 length=3  (27 pairs)
+enumerating the in-grammar space ...
+  30,375 in-grammar formulas x 27 neurons
+running the search on each pair ...
+  MISS  trained a=0.2 unit88: in-grammar 0.25454105110196174 > search 0.2522022213711222 (+0.9274%)  search returned ((tag=NN OR dep=nsubj) AND (NOT const=PP))
+  MISS  trained a=0.05 unit86: in-grammar 0.21660649819494585 > search 0.20679723502304148 (+4.7434%)  search returned ((const=NP AND tag=NN) AND dep=nsubj)
+
+  pairs where the search missed its own in-grammar optimum: 2/27
+
+RESULT: PASS

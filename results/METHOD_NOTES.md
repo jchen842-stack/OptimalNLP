@@ -899,3 +899,155 @@ default beam size, which is strong evidence the two mechanisms are different. So
 weaker version of a *different algorithm*. The original passage is left as written, per this
 file's convention; this correction supersedes its final inference only. Experiment 2b runs
 `beam_optimal.py` itself to settle it.
+
+---
+
+# EXPERIMENT 2b — THE PAPER'S BEAM (`beam_optimal.py`), and a bug in "exact"
+
+2026-08-01. `src/exp_beam_optimal.py`, `tests/test_bruteforce_oracle_all27.py`.
+Raw output in `results/beam_optimal_L3.csv`, `results/beam_optimal_L3_VERDICTS.txt`,
+`results/oracle_L3_all27.txt`.
+
+Experiment 2a swept `MAX_FRONTIER_SIZE`. That is not what the paper means by "beam size 5".
+Upstream ships a separate algorithm, `compositional/beam_optimal.py`, a level-wise beam over
+**complete formulas ranked by exact IoU** (`utils/search_utils.beam_search` puts
+`(iou, label)` into a `PriorityQueue(beam_limit)`), seeded from the previous level's best.
+This experiment runs it unmodified on the same 27 pairs. Nothing upstream was edited;
+`BeamStubConfig` only adds the `get_beam_limit()` accessor.
+
+```
+beam |  bo_agree   bo_roa%  bo_nosol |  cap_agree  cap_roa%  cap_nosol
+   5 |    19/27      0.71      0/27  |      0/19     22.26       8/27
+  10 |    21/27      0.24      0/27  |      0/19     22.08       3/27
+  25 |    23/27     -0.08      0/27  |      2/19     18.52       2/27
+  50 |    24/27     -0.25      0/27  |      3/19      7.30       0/27
+ 100 |    25/27     -0.26      0/27  |      9/19      5.31       0/27
+ 200 |    25/27     -0.26      0/27  |     16/19      0.57       0/27
+```
+
+**Answer to "does beam 5 reproduce the paper's gap": no, and in the opposite direction from
+2a.** The paper's own algorithm at the paper's own default width gives **+0.71%**, well
+*below* the +5.1–6.5% band, not above it. 2a's +22.26% was an artefact of the wrong
+mechanism. Beam 5 already agrees with exact on 19 of 27 pairs.
+
+| | prediction | outcome |
+|---|---|---|
+| **C1** | the paper's beam always returns a formula | **SUPPORTED** — 0/162, vs 13 for the frontier cap |
+| **C2** | beam 5 lands inside +5.1–6.5% | **NOT SUPPORTED** — +0.71%, below the band |
+| **C3** | beam_optimal tighter than the frontier cap at every width | **SUPPORTED** — all six |
+| **C4** | control: exact reference unchanged | **SUPPORTED** — 27/27 within 1e-6 |
+| **C5** | registered in advance as UNTESTED | not counted either way |
+
+C5 is worth keeping as a habit: after 2a's B5 passed vacuously, the analogous claim here was
+checked for testability *before* running and registered as untested, rather than run and
+reported as a pass. The widest swept beam is 200 against a 30,375-formula space, so the
+antecedent could never be satisfied.
+
+## The finding this experiment actually produced: "exact" is not exact
+
+The `bo_roa%` column goes **negative** from width 25 up. A negative gap means beam_optimal
+returned a *higher* IoU than exact search, which is impossible if exact is optimal.
+
+Exhaustively enumerating all 30,375 in-grammar length-3 formulas in integer popcount
+arithmetic, over all 27 pairs (`tests/test_bruteforce_oracle_all27.py`), the search misses
+its own in-grammar optimum on **2 of 27 pairs**:
+
+```
+trained a=0.2  unit88   in-grammar 0.25454105110196174  search 0.2522022213711222  +0.9274%
+trained a=0.05 unit86   in-grammar 0.21660649819494585  search 0.20679723502304148 +4.7434%
+```
+
+The other 25 tie to float64 equality. On both, the missed optimum is
+`((dep=nsubj OR dep=ROOT) AND C)` — squarely in grammar (`Or(leaf, leaf)` then
+`And(..., leaf)`), and `beam_optimal.py` finds it while exact does not.
+
+### Root cause: an inadmissible bound, upstream
+
+`optimal_sample_heuristic.can_improve_or_iou_disjoint_case` (lines 62–75) reasons that for
+DISJOINT A and B, "any formula obtainable by (A OR B) is guaranteed to be <= the one
+obtainable by only A or only B". True for the OR node in isolation. **False once the node is
+extended by AND**, because the AND removes different false positives from each branch:
+
+```
+unit86   IoU(nsubj AND NN) = 0.203735   IoU(ROOT AND NN) = 0.056926
+         IoU((nsubj OR ROOT) AND NN) = 0.216606     -- beats both
+unit88   IoU(nsubj AND NP) = 0.219736   IoU(ROOT AND NP) = 0.056530
+         IoU((nsubj OR ROOT) AND NP) = 0.254541     -- beats both
+```
+
+`dep` is single-valued, so `dep=nsubj` and `dep=ROOT` share exactly 0 tokens and take that
+code path. The OR node is therefore assigned a ceiling below what its own subtree can reach,
+and `reduce_frontier` deletes it the moment the incumbent passes that ceiling:
+
+```
+unit86   ceiling 0.203398 dropped at threshold 0.203735, subtree could reach 0.216606
+unit88   ceiling 0.232677 dropped at threshold 0.232934, subtree could reach 0.254541
+```
+
+Both drops are near-misses — the ceiling falls below the threshold by 0.00034 and 0.00026.
+That is why only 2 of 27 pairs are affected: the bound is wrong in general but only *bites*
+when an incumbent lands in the narrow window between the false ceiling and the true reach.
+It also means the failure rate is a property of this corpus, not a bound on the bug.
+
+This is upstream's heuristic, not this project's pipeline. Every mask, quantity helper and
+metric in `verify/run_all.sh` still passes.
+
+### What it changes in the published numbers
+
+Substituting the true in-grammar optimum for the 2 wrong exact values (the 2 affected pairs
+also move into the "solutions differ" set, so n rises from 7 to 9):
+
+```
+(a) ALL 27 pairs          published +0.96%   corrected +1.22%
+(b) RESTRICTED to differ  published +5.05%   corrected +4.21%   (n 7 -> 9)
+```
+
+**The headline moves off the band.** The matched-length +5.05% was described above as
+landing on the lower edge of the +5.1–6.5% vision band; corrected, it is **+4.21%**, below
+it. The direction is worth noting: correcting an error that made *exact* look worse pushed
+the exact-over-beam gap *down*, because the two corrected pairs enter the restricted set
+carrying small gaps.
+
+### Length 4 is UNVERIFIED and this is not a claim about it
+
+`tests/test_bruteforce_oracle.py` at `ORACLE_LENGTH=4` compares grammar expressiveness on
+one unit; it has never checked whether the search attains the in-grammar optimum across the
+grid at length 4. Nothing here says how often exact misses at length 4. The mechanism has no
+reason to be length-3-specific and the window it needs is wider at length 4 (more incumbents,
+more chances to land in it), so the length-4 exact numbers — including every Phase B figure —
+should be read as **unverified**, not as correct. Scoping a length-4 oracle (1,366,875
+formulas x 27 pairs) is the obvious next check and has not been done.
+
+### Why the existing oracle did not catch this
+
+`tests/test_bruteforce_oracle.py` asserts exactly the right thing — `search == in-grammar
+max` — and passes honestly. It runs **three** cases: trained unit88 a=0.1, untrained unit92
+a=0.1, and the proxy neuron. All three are among the 25 that tie. The assertion was correct
+and the sample was too small, which is the same shape as the `min_fire` unit-selection trap
+recorded at the top of this file: **a check is only as strong as the set it is evaluated
+over.** `tests/test_bruteforce_oracle_all27.py` now runs it over all 27 and is a regression
+test against the recorded 2-pair miss set — it fails if a new pair starts missing, or if a
+recorded miss disappears (e.g. after an upstream fix).
+
+It is also the second time in this project that a tool built to validate the pipeline instead
+found a property of the upstream method, after the formula-grammar finding above. Both times
+the first reading was "our code is broken".
+
+---
+
+## CORRECTION to "What this does and does not change" (formula-grammar section)
+
+That section states: *"Every result in `results/` is what the search returns, and the search
+is optimal within the space it constructs — the oracle confirms that to full precision,
+recovering the identical formula string."*
+
+**The second clause is false.** The search is optimal within its constructed space on 25 of
+27 length-3 pairs, not all of them, and the oracle confirmed it only on the 3 cases it ran.
+The first clause stands: every result in `results/` is still exactly what the search
+returned, and nothing has been silently restated. The corrected band figures above are
+published alongside the originals rather than replacing them.
+
+The same section's closing line, *"The length-3 results are untouched in both senses — the
+gap is +0.0000% there"*, remains true **as a statement about grammar expressiveness** (the
+in-grammar max does equal the unrestricted max at length 3). It is not true as a statement
+that the length-3 search results are correct, and it should not be read that way.
