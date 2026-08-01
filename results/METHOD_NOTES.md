@@ -1051,3 +1051,214 @@ The same section's closing line, *"The length-3 results are untouched in both se
 gap is +0.0000% there"*, remains true **as a statement about grammar expressiveness** (the
 in-grammar max does equal the unrestricted max at length 3). It is not true as a statement
 that the length-3 search results are correct, and it should not be read that way.
+
+---
+
+# RETRACTION — the root cause named in experiment 2b is WRONG
+
+2026-08-01, same day, before any patch was written. `src/exp_disjoint_falsification.py`,
+raw output in `results/disjoint_falsification_L3.csv` and
+`results/disjoint_falsification_VERDICTS.txt`.
+
+## Source claims, checked against the pinned SHA
+
+Checked in `.upstream-clean/` (verified at `70805299fc0758951a650197bffcc792d0ccca20`), not
+against the patched working copy — the distinction matters, because two of these differ
+between the two trees.
+
+| claim | verdict | evidence |
+|---|---|---|
+| `estimate_label_quantities` forks on `are_disjoint()`, and the disjoint branch does **not** receive `neuron_quantities` | **CONFIRMED** | `utils/optimal_utils.py:270-281`; disjoint at :273-275, else-branch passes `neuron_quantities=` at :277-282 |
+| upstream `reduce_frontier` is a pure threshold prune, keeps on `-iou >= threshold`, no frontier-size logic | **CONFIRMED** | `compositional/optimal.py:412-428`, keep test at :425. `MAX_FRONTIER_SIZE`, `_apply_beam_cap`, `nsmallest` do not appear in the pinned file at all |
+| `can_improve_or_iou_disjoint_case` does not exist upstream | **REFUTED** | it exists: `compositional/optimal_sample_heuristic.py:17` (def), `:93` (sole call site, inside `estimate_disjoint_label_info`) |
+
+The function name stands. My **line citation** was sloppy — "lines 62-75" is the comment and
+predicate body, not the `def`; the correct citation is `:17` and `:93`.
+
+## The falsification test, and what it destroyed
+
+One line: force `are_disjoint()` to return `False` unconditionally, so every node takes the
+non-disjoint branch. Re-run exact, length 3, all 27 pairs, K=15, alphas matching 2b.
+
+| | prediction | outcome |
+|---|---|---|
+| **F1** | both known misses recover | **NOT SUPPORTED** — both STILL MISSING, byte-identical IoU |
+| **F2** | no pair gets worse | **NOT SUPPORTED** — 5 pairs got worse, worst -1.598e-02 |
+| **F3** | runtime rises, no halts | **SUPPORTED** — 0 halts, median 1.07s -> 4.10s (3.83x) |
+| **F4** | the 25 already-optimal pairs are unchanged | **NOT SUPPORTED** — 5 of them changed |
+
+**F1 is decisive. The disjoint branch is not the cause.** Both misses return exactly the
+values they returned before — `0.2522022213711222` and `0.20679723502304148`, unchanged to
+the last bit. F3 rules out the obvious escape: at 3.83x the runtime the forced branch was
+demonstrably being exercised, so F1's negative result is interpretable rather than a no-op.
+
+**The root-cause paragraph in experiment 2b is retracted.** Specifically retracted: the claim
+that `can_improve_or_iou_disjoint_case`'s disjoint reasoning is what assigns the OR node its
+low ceiling and loses the optimum. The *observations* in that section stand — the 2/27 miss
+count, the two IoU values, the ceilings and thresholds at the drop, and the fact that
+`(A OR B) AND C` beats both branches. What does not stand is the causal attribution. **No
+patch was written, and item 8 of the queue is blocked**: its precondition ("if the disjoint
+branch is confirmed unsound") is not met — it is confirmed *not* to be the cause.
+
+## What F2 and F4 found instead, and it is worse
+
+Forcing the non-disjoint branch made **5 previously-optimal pairs lose their optimum**:
+
+```
+trained   a=0.1  unit510   0.157458 -> 0.147743   (-9.71e-03)
+trained   a=0.05 unit87    0.072072 -> 0.072058   (-1.38e-05)
+untrained a=0.2  unit92    0.280018 -> 0.264042   (-1.60e-02)
+untrained a=0.1  unit396   0.148630 -> 0.141812   (-6.82e-03)
+untrained a=0.1  unit510   0.154405 -> 0.152444   (-1.96e-03)
+```
+
+So **both branches can lose the optimum**. The disjoint branch is not a sound shortcut that
+the general branch lacks, nor the reverse — they are two unsound estimators that fail on
+different pairs. The unsoundness is not localised to the fork, and "always take the
+non-disjoint branch" is not a fix; it is a different set of misses, and a strictly larger one
+here (5 vs 2). The real cause is somewhere in the estimator family itself and is **not yet
+identified**. It should not be written up as though it were.
+
+---
+
+# CORRECTION — two different mechanisms were being called the same thing
+
+Experiment 2a and experiment 2b both say "the frontier drops the node", and they are not the
+same mechanism. Stated once, properly:
+
+| | experiment 2a | experiment 2b |
+|---|---|---|
+| function | `_apply_beam_cap` | `reduce_frontier` |
+| whose code | **ours** — `patches/0001-frontier-beam-fallback.patch` | **upstream**, `optimal.py:412-428` at the pinned SHA |
+| rule | keep top-N by estimated ceiling | keep every node with `-iou >= threshold` |
+| bounded by | frontier **size** (`MAX_FRONTIER_SIZE`) | incumbent **IoU** |
+| active when | `MAX_FRONTIER_SIZE` is an int (beam runs) | always |
+
+In an **exact** run `MAX_FRONTIER_SIZE is None`, so `_apply_beam_cap` is a verified no-op
+(check 3) and only upstream's threshold prune is live. The 2/27 misses are therefore entirely
+upstream behaviour and have nothing to do with our patch. Conversely 2a's 8/27 no-solution
+runs are entirely our cap and say nothing about upstream's exact search.
+
+**The commit message on `dbeec1c` (experiment 2b) blurs these**, and git history is not being
+rewritten, so this note supersedes it. Read that message's root-cause sentence as retracted
+per the section above.
+
+---
+
+# RECOUNT — the "beam finds the optimum 20/27" sentence, against true optima
+
+Two assumptions were put to the data. Both fail, and the correction runs the opposite way
+from the one expected.
+
+**Assumption: both misses sit inside the frontier-cap beam-200's 7 disagreements. REFUTED.**
+Neither does. On both missing pairs the frontier-cap beam returned *exactly the same wrong
+value as exact* (`0.252202` and `0.206797`), so they counted as **agreements** and sat inside
+the 20/27, not the 7. The misses were found by `beam_optimal`, a different algorithm — the
+same conflation the correction above is about.
+
+**True-optimality on all 27 length-3 pairs, measured against exhaustive in-grammar enumeration:**
+
+```
+optimal.py exact          25/27
+frontier-cap beam-200     18/27      (not 22/27)
+beam_optimal-200          27/27
+```
+
+So the 20/27 figure was **overstating** the frontier-cap beam, not understating it: it counts
+agreement-with-exact, and twice the beam agreed with a wrong answer. Its true-optimal rate is
+**18/27**, below its agreement rate.
+
+The sentence still gets rewritten rather than footnoted, but for the other beam. **The
+paper's `beam_optimal` at width 200 is exactly optimal on all 27 pairs at length 3** — and
+per experiment 2b it is already 19/27 in agreement at width 5. That is the real "beam finds
+the optimum" result and it is far stronger than 20/27.
+
+**Matched-length gap against true optima, all 27 pairs:**
+
+```
+frontier-cap beam-200     +1.22%
+beam_optimal-200          +0.00%
+```
+
+At length 3 the paper's own beam has **no optimality gap at all** on this grid. Any gap
+previously attributed to beam approximation at this length was measuring our frontier cap, or
+measuring exact's own two errors.
+
+---
+
+# EXPOSURE — 2/27 is not a rate, and the premise behind it is also wrong
+
+The at-risk structure is `(A OR B)` followed by `AND C` or `AND NOT C`. Both observed misses
+have exactly that shape. Counting it in the vocabulary, with no re-running:
+
+```
+                                    K=15                K=50
+in-grammar length-3 space          30,375           1,125,000
+same-category leaf pairs               22                 242
+  ... of which NOT disjoint            3 (const)         14 (const)
+at-risk constructions, same-cat
+  AND actually disjoint            1,140 (3.75%)     45,600 (4.05%)
+at-risk using ALL disjoint pairs   3,240 (10.67%)   174,200 (15.48%)
+```
+
+**"Same-category values are mutually exclusive" is false in this vocabulary.** `const` is
+constituency labelling and a token sits inside several constituents at once — `const=NP` and
+`const=VP` share **8,037** tokens, `const=NP` and `const=PP` share **8,137**. `lemma`, `tag`,
+`dep` and `ent` are single-valued and do partition. So category identity is not a proxy for
+disjointness, and `are_disjoint` does not use it: it keys off the computed `disjoint_info`
+matrix, which is why the category-agnostic row (871 of 1,225 leaf pairs are disjoint at K=50)
+is the honest superset.
+
+The exposure is therefore **4.05% of the K=50 space** on the narrow reading and **15.48%** on
+the reading that matches what `are_disjoint` actually tests — against 2 observed misses out
+of 27 pairs. Those are different denominators (formulas vs pairs) and neither is a rate for
+the other. **2/27 must not be quoted as a failure rate**, and now that both numbers are here,
+what can be said is: the at-risk structure is common, the observed failures are rare, and the
+gap between those two facts is unexplained because the cause is unidentified.
+
+---
+
+# CAVEAT — the disjoint-lemma control is a COST control only
+
+Added before it gets cited as evidence of correctness.
+
+`lemma` is single-valued, so lemma concepts are mutually exclusive by construction and every
+OR node in that control takes the disjoint branch: **100% exposure to the estimator path that
+was under suspicion**. Its headline behaviour — 1 to 3 nodes visited at K=50 length 3,
+terminating in under 0.05s, and the same at K=8 length 5 in experiment 1 — is exactly what a
+correct search on a trivial vocabulary looks like. It is *also* exactly what an
+under-computed ceiling produces, because both end the search immediately. **Fast and unsound
+are not distinguishable from outside.**
+
+The control establishes that cost is driven by concept overlap. It does **not** establish
+that the search is correct on that arm, and it must not be cited for that. It has never been
+oracle-checked. When the oracle widens to the lemma arm at length 3, that gap closes; until
+then the control carries a cost claim only.
+
+---
+
+# CORRECTION — check numbering, and what the suite structurally cannot catch
+
+**Numbering.** `VERIFICATION.md`'s table is canonical: check **9** is "someone else can run
+this" (`VERIFICATION.md:73`, prose only, pointing at `REPRODUCE.md` 6b), and the brute-force
+oracle is check **10** (`VERIFICATION.md:412`). `verify/run_all.sh:160` printed the oracle as
+`9.` until 2026-08-01; that label was the source of the mis-citation, and every `.md`
+citation in the repo already said 10. The label is now `10a`, with `10b` for the widened
+27-pair check. No diary entry cites the oracle by number, so no diary citation needed changing.
+
+**Widened.** Check 10 ran 3 cases. It now runs 10a (3 cases, plus the expressiveness-gap
+measurement) and 10b (`tests/test_bruteforce_oracle_all27.py`, all 27 length-3 pairs, a
+regression test against the recorded 2-pair miss set). Suite is 11/11.
+
+**What the suite could never have caught, and this is the load-bearing part.** The other nine
+checks are alignment, padding, patch no-op, IoU-vs-upstream, masks-vs-raw-`.feats`, the two
+stub checks, model reproduction, and binarisation. Every one of them verifies an **input or a
+plumbing step**. Not one of them can fail on a search-optimality bug, because none of them
+looks at what the search returns. The suite was built on the assumption that **upstream's
+search was correct and only our inputs needed checking** — and that is precisely the
+assumption that failed. Check 10 is the only check in the suite that can see a wrong answer,
+and it was running 3 cases out of 27.
+
+This attaches to every "10/10, no CANNOT VERIFY" claim in this repo, and to the new 11/11:
+**the suite verifies that we fed the method the right data. It does not verify that the
+method computed the right answer**, except at check 10, on the pairs check 10 happens to run.

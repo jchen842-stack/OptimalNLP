@@ -157,8 +157,18 @@ run_check "8. binarisation is per-unit" \
   "\"$PY\" verify/check_binarise.py" \
   "$CKPT $ACTS" "$CKPT and results/*.npz"
 
-run_check "9. brute-force oracle (length $ORACLE_LENGTH)" \
+# Numbering follows VERIFICATION.md, whose table is canonical: check 9 is "someone else can
+# run this" (REPRODUCE.md 6b, prose only), and the brute-force oracle is check 10. This label
+# read "9." until 2026-08-01, which is where the mis-citation of the oracle as check 9 came
+# from; every .md citation already said 10.
+run_check "10a. brute-force oracle (length $ORACLE_LENGTH, 3 cases)" \
   "ORACLE_LENGTH=$ORACLE_LENGTH \"$PY\" tests/test_bruteforce_oracle.py" \
+  "$ACTS $ACTS_U" "results/*.npz (REPRODUCE.md step 3)"
+
+# 10b widens 10a from 3 cases to all 27 length-3 pairs. 10a asserts search == in-grammar max
+# and passes; it ran too small a sample to see that the assertion fails on 2 of the 27.
+run_check "10b. in-grammar optimality, all 27 pairs" \
+  "\"$PY\" tests/test_bruteforce_oracle_all27.py" \
   "$ACTS $ACTS_U" "results/*.npz (REPRODUCE.md step 3)"
 
 # ---- summary -------------------------------------------------------------------------
