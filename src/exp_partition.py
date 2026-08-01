@@ -12,7 +12,11 @@ Distinct from the two earlier protocol items: alpha was a miss, K was a scope ch
 one was never registered at all.
 
 This script rebuilds the sample axis as one sample per sentence (~2,000), leaving concepts,
-masks, alpha and K untouched, and re-runs length 3 on all 27 pairs.
+masks, alpha and K untouched, and re-runs the search on all 27 pairs.
+
+FORMULA LENGTH IS `PART_LENGTH` (env var, default 3) -- see the module-level `LENGTH`. Earlier
+this preamble hardcoded "length 3", which printed a misleading header on the PART_LENGTH=4
+run; the run itself was unaffected (see results/partition_L4_provenance.txt).
 
 PRE-REGISTERED:
 

@@ -121,6 +121,8 @@ def main():
     print(f"\n  median time {st.median(times):.1f}s vs flat {FLAT_MEDIAN_TIME}s "
           f"({st.median(times) / FLAT_MEDIAN_TIME:.2f}x); max {max(times):.1f}s")
 
+    addenda_scoring(part, flat)
+
     if a or b:
         print("\n  D5.0's founding frontier-explosion observation is substantially a")
         print("  SAMPLE-REPRESENTATION ARTIFACT. Append a superseding diary entry.")
@@ -130,3 +132,79 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+# =====================================================================================
+# ADDENDA — registered 2026-08-01 while the L4 run was still in flight, before
+# results/partition_L4.csv existed. Not edited after seeing results.
+# =====================================================================================
+ADDENDA = """
+A1  P5(b) IS SCORED ON THE MATCHED SET.
+    The verdict median is over pairs that terminated in BOTH the flat and the per-sentence
+    runs. The all-27 median is reported alongside, labelled as INCLUDING TRUNCATED PEAKS.
+    Why: a timed-out run's peak frontier is truncated at whatever it had reached when the
+    cap fired, so it is a lower bound, not a measurement. All-27 median MEMBERSHIP also
+    changes with the treatment -- if the partition removes timeouts, different pairs enter
+    the median. The matched set holds membership fixed and excludes truncated values.
+    This biases the test AGAINST the hypothesis: the pairs excluded are the flat run's
+    hardest four, the ones most likely to show a large peak drop. A matched-set pass is
+    therefore conservative.
+
+A2  THE TWO DISJUNCTS MEASURE DIFFERENT THINGS, AND A SPLIT IS COHERENT.
+    P5(b), peak frontier, measures the bound-tightening mechanism DIRECTLY.
+    P5(a), timeouts, is wall-clock. Per the paper's Section C, sample computation costs
+    on the order of |D| times more arithmetic per estimate than aggregated, and |D| goes
+    from 1 to ~2,000 here.
+    So (b) firing while (a) does not is a COHERENT OUTCOME -- bounds tightened, and the
+    per-sample arithmetic absorbed the runtime gain. It is NOT a split failure and must not
+    be reported as one. Median time and median expanded-node count are printed so the two
+    effects can be separated after the fact rather than argued about.
+
+A3  WHAT A P3 PASS AT LENGTH 3 ACTUALLY MEANT (mechanism, recorded before scoring L4).
+    With |D| = 1, aggregated and sample computation are IDENTICAL, so Algorithm 1's
+    refine-on-pop step (lines 14-21) was a no-op for the entire flat series. Both misses
+    died on the aggregated estimate BEFORE ever being popped -- confirmed by the targeted
+    trace, which found P* carrying the "sum" estimate at the moment reduce_frontier
+    dropped it. Refinement could not have rescued them under the flat partition, because
+    there was nothing to refine to.
+    Under |D| ~ 2,000 refinement is non-trivial for the first time. So the length-3 P3 pass
+    means A DISABLED COMPONENT WAS TURNED BACK ON -- not that bounds tightened globally.
+    The same reading applies to any L4 recovery.
+"""
+
+
+def addenda_scoring(part, flat):
+    """Matched-set P5(b) plus the time/count split A2 asks for."""
+    import statistics as _st
+    matched = [r for r in part
+               if r["halted"] == "no"
+               and flat.get((r["arm"], r["alpha"], r["unit"]), {}).get("halted") == "no"]
+    print(ADDENDA)
+    print("--- A1: P5(b) ON THE MATCHED SET (verdict) ---")
+    if not matched:
+        print("  no pairs terminated in both runs; P5(b) NOT SCOREABLE on the matched set")
+        return
+    mp = _st.median([float(r["peak"]) for r in matched])
+    fp = _st.median([float(flat[(r["arm"], r["alpha"], r["unit"])]["peak_frontier"])
+                     for r in matched])
+    ap = _st.median([float(r["peak"]) for r in part])
+    print(f"  matched set n={len(matched)} of 27 (excludes the flat run's 4 timeouts "
+          f"and any new ones)")
+    print(f"    flat median peak (matched)      : {fp:,.0f}")
+    print(f"    partition median peak (matched) : {mp:,.0f}   ratio {mp / fp:.2f}x")
+    print(f"    P5(b) VERDICT: {'YES' if mp < fp / 2 else 'NO'}  (threshold: below half of "
+          f"{fp:,.0f} = {fp / 2:,.0f})")
+    print(f"  all-27 median peak: {ap:,.0f}  <- INCLUDES TRUNCATED PEAKS, not the verdict")
+    print("\n--- A2: separating bound-tightening from per-sample arithmetic ---")
+    mt = _st.median([float(r["time_s"]) for r in matched])
+    ft = _st.median([float(flat[(r["arm"], r["alpha"], r["unit"])]["time_s"])
+                     for r in matched])
+    me = _st.median([float(r["expanded"]) for r in matched if float(r["expanded"]) > 0])
+    fe = _st.median([float(flat[(r["arm"], r["alpha"], r["unit"])]["expanded"])
+                     for r in matched
+                     if float(flat[(r["arm"], r["alpha"], r["unit"])]["expanded"]) > 0])
+    print(f"  matched median time     : flat {ft:>9.1f}s  partition {mt:>9.1f}s  "
+          f"ratio {mt / ft:.2f}x")
+    print(f"  matched median expanded : flat {fe:>9.0f}   partition {me:>9.0f}   "
+          f"ratio {me / fe:.2f}x")
+    print("  expanded down + time up  => bounds tightened, per-sample arithmetic absorbed it")
+    print("  expanded flat + time up  => no bound tightening; cost is pure arithmetic")

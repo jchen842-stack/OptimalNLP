@@ -1,0 +1,6 @@
+captured 2026-08-01T22:49:59Z
+PID=65052
+Sat Aug  1 15:38:09 2026     /Users/justin/miniconda3/envs/compexp/bin/python src/exp_partition.py
+-- env grep --
+OPTIMALCE_UPSTREAM=/Users/justin/projects/optimalce
+PART_LENGTH=4
