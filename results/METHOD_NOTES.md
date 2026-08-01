@@ -1651,3 +1651,140 @@ before it reaches a comparison, not after.** Third instance of that shape in thi
 **This does not test the paper's Section 4.3 mitigation.** A discriminating version needs a
 setting where beam is *not* already optimal — length 4, where beam-vs-exact actually
 disagrees. Not run.
+
+---
+
+# THE PAPER'S NON-DEGENERACY ASSUMPTION DOES NOT HOLD ON THIS CORPUS
+
+2026-08-01. K=15, M=24,199, min_support=5, arm `all`, neuron = trained a=0.2 unit88.
+
+Paper Section E.2.2 calls the aggregated `|Union_min|` exceeding 0 a "rare degenerate case
+(not observed in any of the datasets tested in this paper)". That case is
+`Bott_1(E^C)_x != 0`.
+
+```
+common C = |{i : covered by >1 concept}|     20,280 of 24,199   (83.8%)
+unique                                        3,369
+uncoverable                                     550
+
+E^C_j = |C AND concept_j AND NOT neuron|, per concept, ascending:
+   dep=nsubj    859     dep=ROOT     1562     lemma=.      1745     dep=punct   2033
+   dep=pobj    2567     lemma=a      2696     synset=...   2696     dep=prep    2740
+   tag=IN      2832     dep=det      4041     tag=DT       4070     tag=NN      4138
+   const=PP    9096     const=VP    10464     const=NP    12726
+
+|SE^C| = |C AND NOT neuron|            = 17,643
+Bott_1(E^C)_x  (min over concepts)     = 859
+Bott^A_1(E^C)  (min dataset-wide total) = 859
+
+fraction of samples with Bott_1(E^C)_x != 0  =  1/1  =  100%
+```
+
+**It holds on 100% of samples, not rarely.** The smallest per-concept extras-in-common count
+is 859, an order of magnitude above zero — this is not a marginal violation.
+
+The mechanism is exactly as predicted: `min_support` + top-K selection picks the highest-support
+features, so **83.8% of tokens are covered by more than one concept** and every one of the 15
+concepts has thousands of common locations where the neuron is silent. In vision each image
+is a sample and a given concept is absent from most images, so `Bott_1` hits 0 routinely. Here
+it cannot.
+
+**One sample, not many.** `run_one` builds `bitmaps = neuron_bits.reshape(1, M)` — the whole
+24,199-token corpus is a **single sample**. So "fraction of samples" is over N=1, and the
+per-sample and dataset-wide aggregations largely coincide. This is a structural difference
+from the vision setting that was not previously recorded and that bears directly on which of
+the paper's two estimator forms is even meaningful here. `load_tokens` does not expose a
+token-to-sentence map, so the per-sentence view was not computed.
+
+## Transcription discrepancy to resolve before the Eq (50)/(51) arithmetic
+
+Verified against source (`utils/optimal_utils.py:477-521`, pinned SHA). `Eq (15)` as
+implemented is:
+
+```python
+max_label_common_intersection_sum = min(max_common_intersection_sum + unique_intersection_sum,
+                                        neuron_coverable_sum)              # :512-514
+label_iou = max_label_common_intersection_sum \
+            / (num_hits + min_common_extras_sum + unique_extras_sum)       # :517-520
+```
+
+The denominator matches the shape of Eq (51) — `|1N|` is `num_hits`, plus common and unique
+extras. **The numerator does not match the transcribed Eq (50).** The transcription caps with
+`Top^A_1(I^C)`; the code caps with **`neuron_coverable_sum`** — the neuron's own coverable hit
+count, not a top-1 concept-wise intersection total. It also adds the unique-intersection term
+inside the `min`, which the transcription does not show.
+
+That difference sits exactly on the numerator of the ceiling under test, so assembling the
+arithmetic before resolving it would produce a number that cannot decide bug-vs-paper either
+way. **The arithmetic is deferred pending confirmation of Eq (50) against the PDF**, not
+abandoned. The remaining terms (`|SE^C|`, `Bott^A_1(E^C)`, per-concept `E^C_j`) are computed
+above and ready.
+
+---
+
+# EXPOSURE — final wording
+
+**`reduce_frontier` dropped the optimum-carrying prefix on 6 of 27. On 4 of those the search
+recovered because an equal-valued optimum was reachable through a different prefix — a
+property of this corpus, not of the algorithm.**
+
+"2 of 27" is retired as a rate everywhere. Where it still appears in this file it is either a
+count of *unrecoverable losses* (labelled as such) or an unrelated figure (beam no-solution
+counts, agreement counts). The occurrence rate is 6 of 27.
+
+---
+
+# WARM START — recorded as split, not as a clean refutation
+
+**Not supported as stated.** W1 predicted "miss count > 2" and the outcome was 0.
+
+**But the prediction substituted quantities.** It reasoned about *nodes wrongly dropped* and
+was written as a prediction about *misses reported*. With a seed that is already 27/27
+optimal, the reported answer cannot fall below the seed however many nodes are dropped, so the
+two quantities cannot agree. Recorded as a quantity substitution in the prediction — the same
+error shape as "measuring against the knob rather than the quantity it controls", now at the
+level of what a prediction is written about rather than what a statistic measures.
+
+**The supported half:** 12 of 27 warm runs returned **no label at all** — the search dropped
+every candidate and contributed nothing. That is the predicted enlargement of the dropped set,
+visible in the quantity where it shows.
+
+**Length 4 is the discriminating setting and stays DEFERRED, not dropped.** It is the only
+setting where beam is not already optimal, so it is the only place the Section 4.3 mitigation
+can be tested.
+
+---
+
+# STANDING RULE — a non-numeric sentinel must never reach a comparison
+
+Third instance in this project, so it becomes a rule rather than a note.
+
+`nan`, `None`, and no-solution returns fail **silently as successes** under a one-sided test:
+`true - nan > tol` is `False`, so a run that produced no answer scores as "not a miss".
+`-1.0` sentinels inside a sum produce a ratio-of-averages that is not a ratio.
+
+**Rule: assert numeric-and-finite at every verdict boundary, and count sentinels in their own
+bucket before any comparison runs.**
+
+The three instances:
+
+1. Experiment 2a — `best_iou = -1.0` entered a ratio-of-averages, producing `-192.81%` and
+   `+793.54%`. Pre-registered B2 would have printed SUPPORTED off the artefact.
+2. Experiment 1 — timeouts carried observed wall-clock into a median. Caught because both
+   timeouts sat above the median, so the median was unaffected; that was luck.
+3. Warm start — 12 `nan` returns counted as successes in the first scoring pass.
+
+**Sweep of the remaining verdict comparison sites**, all one-sided differences of the form
+`true - x > tol` or `delta < -tol`, every one of which would mis-score a sentinel:
+
+```
+tests/test_bruteforce_oracle_all27.py:129,140     src/exp_noprune.py:264,269,313
+src/exp_disjoint_falsification.py:159,208,220     src/exp_noprune_adjudicate.py:148
+src/exp_beam_width.py:364                         src/exp_beam_optimal.py:321
+```
+
+None is currently mis-scoring: the oracle and falsification paths never produce `None`
+(exact search always returned a label there), and `exp_noprune` is void. They are listed
+because the guard is missing, not because a failure is known. `exp_beam_optimal.py:172` does
+handle it correctly (`best_iou if best_iou == best_iou else None`) and is the pattern to
+follow.
