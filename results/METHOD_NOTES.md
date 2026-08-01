@@ -2279,3 +2279,73 @@ there.
 high, the oracle is **optional**: its only remaining job is converting INCONCLUSIVE into
 confirmed-optimal, which is the expensive half (1,366,875 formulas x 27 pairs). A high (a) may
 make that confirmation not worth buying.
+
+---
+
+# COMPARISON PRECONDITIONS applied retroactively to P7, P8 and item 5
+
+The six fields (`diary/summer_d6.md`) are adopted for every new pre-registration. Applied here
+to the registrations already standing, so they are not exempt from their own protocol.
+`partition_L4.csv` still does not exist, so P7's application is pre-result.
+
+## P7 — frontier near-invariance at length 4
+
+| field | |
+|---|---|
+| **Quantities** | both sides `peak_frontier`, a **node count**, dimensionless. Same kind. Not a time and not a formula-space size — the instance-3 error is excluded by construction. |
+| **Membership** | the **matched set** (terminated in both runs), fixed by A1. All-27 median reported alongside but explicitly labelled non-verdict. |
+| **Reference** | flat length-4 from `beam_vs_exact_K15.csv`: same K=15, same 27 pairs, **same length 4**. The partition differs — that is the treatment, not a mismatch. |
+| **Discrimination** | four disjoint exhaustive bands (B1); `ratio >= 1.2` is a distinct outcome, not a residual. A halving, an enlargement, or near-invariance each give different verdicts. |
+| **Power** | matched-set floor of **10** (B2); below it the verdict is UNDERPOWERED and neither hypothesis is called. |
+| **Sentinels** | timed-out peaks are **truncated lower bounds**, excluded via the matched set; `halted != "no"` is bucketed and counted separately. |
+
+**No gap found.**
+
+## P8 — the fixed-P2 shape (5/5/0 vs 6/4/2)
+
+| field | |
+|---|---|
+| **Quantities** | all six numbers are **counts of pairs** out of 27. Same kind on both rows. |
+| **Membership** | the same 27 (arm, alpha, unit) pairs in both rows. Fixed. |
+| **Reference** | flat exposure audit, same K, alpha set, unit set, length 3. Matches. |
+| **Discrimination** | a per-sentence prefix **not** expanded before being dropped falsifies it and forces re-examination of the 0/27. |
+| **Power** | **full census, not a sample** — all 27 measured. Power is not applicable rather than adequate. |
+| **Sentinels** | **GAP FOUND — see below.** |
+
+### The checklist found a real gap in P8, which is the first prospective evidence for it
+
+**Sentinels: "P* never entered the frontier" is a third outcome and P8's three columns have
+nowhere to put it.** It occurred on **1 of 27 flat** (trained a=0.1 unit92) and **3 of 27
+per-sentence** (trained a=0.1 unit92, trained a=0.05 unit412, untrained a=0.1 unit510).
+
+Those pairs have **no assigned ceiling at all**, so they are neither "inadmissible" nor
+"admissible". Under the registered 3-column shape they would silently fall into the
+*admissible* residual — inflating the apparent improvement, since the per-sentence run has
+three of them against the flat run's one.
+
+**P8 is amended before scoring, and the amendment is recorded as an amendment:** the shape is
+**four columns**, not three —
+
+```
+(inadmissible ceiling) / (expanded before any copy dropped) / (optima lost) / (P* never entered)
+
+flat          6 / 4 / 2 / 1
+per-sentence  5 / 5 / 0 / 3      <- P8, amended
+```
+
+This is the checklist catching something on a registration that had already passed review by
+both of us. It is weak evidence — one instance — but it is **prospective**, which the 7/7
+retro-validation is not.
+
+## Item 5 — alpha=0.005, M ~ 80,000, beam-only
+
+Registered now, before the run is scheduled.
+
+| field | |
+|---|---|
+| **Quantities** | IoU and lift, both ratios. State explicitly whether lift is IoU/density or the ratio-of-averages form — the two differ and both appear in this file. |
+| **Membership** | **HIGHEST RISK.** At alpha=0.005 the `min_fire` floor changes which units are eligible — this is the recurring-error-shape trap documented at the top of this file, where the trained a=0.05 unit set went disjoint from every other alpha. **Unit ids must be pinned with `--unit_ids` and the eligible-set size reported.** |
+| **Reference** | the paper's reported setting. Ours is K=15 against the paper's 25/847/1198 — **the K caveat is still unwritten and must land before item 5 is read**, not after. |
+| **Discrimination** | state in advance what result would count against the paper's setting reproducing, distinct from "the corpus build failed". |
+| **Power** | at alpha=0.005 the flat corpus had **7 of 512 trained units excluded** by `min_fire`; at M ~ 80,000 that changes. Report eligible-set size before sampling. |
+| **Sentinels** | **`beam_optimal` never returns `None`** — verified, C1, 0 of 162 runs. The frontier cap returns no formula on 8/27 at width 5. **This is why item 5 must run `beam_optimal`**, and the immunity claim is void if the frontier cap is used instead. |

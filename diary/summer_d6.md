@@ -1,7 +1,18 @@
 # D6 — the measurement-defect class
 
-**Record, not a conclusion.** The six instances and the shape they share are set out below;
+**Record, not a conclusion.** The instances and the shape they share are set out below;
 the entry itself is yours to write.
+
+## Opening — the suite's correctness coverage was one check, and it was defective
+
+`verify/run_all.sh` runs 10 checks. **Nine examine inputs or plumbing** — alignment, padding,
+patch no-op, IoU-vs-upstream, masks-vs-raw-`.feats`, two stub checks, model reproduction,
+binarisation. **Exactly one examines a result**: the brute-force oracle. That one check was
+**instance 2** — it sampled 3 cases out of 27 and had a 14.5% chance of firing.
+
+So the suite's entire correctness coverage was a single check, and that check was defective.
+**"11/11, no CANNOT VERIFY" was true, and near-uninformative about correctness.** It said the
+right data went in. It did not say the right answer came out, and could not have.
 
 Every result cited here is in `results/METHOD_NOTES.md` with its raw output committed.
 
@@ -85,3 +96,44 @@ and a blocking decision is a comparison.
 The 2/27 exact-search misses are **not** an instance. They are a real property of an
 inadmissible estimator, measured correctly, and they survive every correction above. Their
 attributed cause changed twice; their existence did not.
+
+---
+
+## THE DELIVERABLE — comparison preconditions
+
+The taxonomy above is the diagnosis. This is what it is for. **Every comparison that produces
+a verdict carries these six fields, stated before the comparison runs.**
+
+| field | the question |
+|---|---|
+| **Quantities** | What is on each side, **with units**? Are they the same kind of thing? |
+| **Membership** | Which set is being compared over? Is that set **fixed across the conditions**, or does it move with the treatment? |
+| **Reference** | Does the reference's **configuration match the run being scored** — same length, same K, same alpha, same partition, same unit set? |
+| **Discrimination** | **What input would change the answer?** A test no input can fail is not a test. **Extended to decisions:** any claim that an effect is large enough or small enough to matter requires a **computed magnitude**, not an assertion. |
+| **Power** | If the comparison samples, what is the **probability it fires when the defect is present**? |
+| **Sentinels** | What **non-numeric values** can reach the comparison — `nan`, `None`, no-solution, truncated-by-timeout — and where are they bucketed? |
+
+### Retro-validation: which field catches each instance
+
+| # | instance | field that fires |
+|---|---|---|
+| 1 | D5.4 density artifact | **Membership** — the unit set moved between arms |
+| 2 | Oracle at 3 cases | **Power** — 14.5% chance of firing |
+| 3 | Expanded-count vs formula-space | **Quantities** — a time ratio compared against a count ratio |
+| 4 | `nan` sentinel | **Sentinels** |
+| 5 | Treatment-dependent median membership | **Membership** — truncated peaks, membership moves with treatment |
+| 6 | Depth-3 reference under a depth-4 search | **Reference** — enumeration depth did not match search length |
+| 7 | Item 3 blocked on an uncomputed effect size | **Discrimination** (decision form) — no magnitude computed |
+
+**7 of 7 caught. All six fields fire at least once.**
+
+### The retro-validation is weak evidence, and saying so is the point
+
+**The checklist was derived from these seven instances.** A 7/7 pass on the set that generated
+it is close to tautological — it demonstrates the taxonomy is self-consistent, not that it is
+complete. The fields were written by reading the failures backwards.
+
+**The real test is prospective**, on defects not yet seen. No claim is made here that the six
+fields are exhaustive. The commitment is the process one: when an eighth instance appears and
+none of the six fields catches it, **the gap is recorded as a seventh field rather than forced
+into an existing one.** That is the only way this stays a test instead of becoming a ritual.
