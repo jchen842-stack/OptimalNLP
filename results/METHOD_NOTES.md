@@ -2430,3 +2430,142 @@ something shallower was cut first.
 **The general form of the exposure question is: "was any ancestor of any optimal formula
 pruned?"** — not "was P pruned". Every exposure figure in this file, including the 14/27 above,
 answers the narrower question and is therefore still a lower bound on true exposure.
+
+---
+
+# HEADLINE — losses occur exactly where the optimum has ONE prefix
+
+**Mechanism, stated as the exposure section's headline.**
+
+```
+losses at n_prefixes = 1 : 2 of 2   (trained a=0.2 unit88, trained a=0.05 unit86)
+bound-flagged non-losses : 2 of 2 have n_prefixes = 2
+vulnerable population    : 9 of 27 pairs have n_prefixes = 1
+```
+
+**The rate is 2/9 = 22% among vulnerable pairs, not 2/27 = 7%.** Every pair with a redundant
+prefix survived; every loss was a pair with none. `n_prefixes` is the redundancy the search has
+against an unsound prune, and where it is 1 there is none.
+
+## Power check on P3, and why it is the second reason not to read P3 as a fix
+
+`n_prefixes` is **partition-invariant**: the optimal mask is unique on all 27 pairs, masks are
+partition-invariant, and the prefix set is derived from masks. **The same 9 pairs are
+vulnerable in both runs.**
+
+So the per-sentence result of 0/27 is really **0 of 9**. Under the flat rate of 2/9:
+
+```
+P(0 losses in 9 vulnerable pairs) = (1 - 2/9)^9 = (7/9)^9 = 0.1042
+```
+
+**p ~ 0.10. P3's improvement is not distinguishable from chance at n = 9.**
+
+Caveats, both real: the base rate is estimated from **n = 2**, and the two runs are **not
+independent** — same corpus, same concepts, same units, same optimal masks.
+
+**This is the second independent reason not to read P3 as a fix, and the two should be stated
+together:**
+
+1. **Mechanistic** — both miss-prefix ceilings are **byte-identical** across partitions
+   (`0.232677`, `0.203398`) and both prefixes are still dropped. The bound did not change.
+2. **Statistical** — 0/9 against a 2/9 base rate has p ~ 0.10. The improvement is within
+   chance.
+
+**P3 was registered and reviewed by both of us without a Power field.** The checklist
+post-dates it. Applied retroactively, Power is the field that fires, and it changes the
+reading from "both misses recovered" to "no loss was observed in 9 vulnerable pairs, which a
+null model produces one time in ten".
+
+## Shape hypothesis — TESTED, NOT SUPPORTED, and replaced by the rule underneath it
+
+Hypothesis: *a trailing AND or AND-NOT forces `n_prefixes = 1`; all-OR admits up to 3.*
+
+```
+trailing AND / AND-NOT : n_prefixes [1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3]   all == 1?  NO
+all-OR (OR+OR)         : n_prefixes [3]                                        any > 1?  yes
+```
+
+**Not supported.** `ANDNOT+ANDNOT` (n = 9 pairs) gives `n_prefixes = 2` every time, not 1.
+
+**But `n_prefixes` IS a deterministic function of the operator signature** — within every
+signature group it is constant across all 27 pairs:
+
+```
+OR+OR                        -> 3      (n=1)
+ANDNOT+ANDNOT                -> 2      (n=9)
+ANDNOT+OR / AND+OR /
+OR+AND / OR+ANDNOT           -> 1      (n=9)      <- THE VULNERABLE CLASS
+multi-signature optima       -> 2 or 3 (n=8)
+```
+
+The governing rule is **operator repetition, not trailing operator**: identical adjacent
+operators commute and create redundant construction orders.
+`a OR b OR c` is symmetric in three terms -> 3 prefixes. `a AND NOT b AND NOT c` has two
+commuting negated terms -> 2 prefixes. A **mixed** signature has no commuting pair -> **1
+prefix, and no redundancy**.
+
+**So the vulnerable class IS identifiable from the formula shape with no search** — just by a
+different rule than the one proposed. An optimum whose two operators differ has exactly one
+construction path, and a single unsound prune anywhere on it loses the optimum.
+
+## Ancestor question CLOSED at length 3, and the answer is "almost always"
+
+Level-1 prefixes are single leaves, all present at initialisation and exposed to
+`reduce_frontier` at Algorithm 1 line 11. Checking whether any leaf ancestor of an optimal
+formula was pruned there:
+
+```
+pairs with >= 1 optimal leaf ancestor pruned : 24 of 27
+total optimal leaf ancestors pruned          : 31
+```
+
+**24 of 27.** So "was any ancestor of any optimal formula pruned?" answers **yes almost
+everywhere**, while only 2 pairs lose the optimum. This closes the question at length 3 and
+settles what it is worth: **"was it pruned" is a near-vacuous predicate.** Everything hinges on
+*when* the prune happens relative to the expansion — the pop-ordering result — which is why
+the held event-ordering metric is the only version that measures rather than bounds.
+
+---
+
+# P9 — registered from length-3 data, before partition_L4.csv exists
+
+```
+P9  The n_prefixes distribution at length 4 shifts UPWARD for all-OR signatures and stays at
+    1 for signatures with a trailing narrowing operator.
+```
+
+Registered with the correction above already applied to its reading: the governing variable is
+**operator repetition**, so the sharpened form is *repeated-operator signatures gain prefixes
+with length (OR+OR+OR -> up to 6; ANDNOT x3 -> up to 6), mixed signatures stay at 1*.
+
+**Consequence stated in advance, both directions:**
+
+- If the **mixed-signature share rises** with length, the vulnerable population grows and
+  **the bug concentrates with length**. Length 4 is then worse than length 3, and every
+  length-4 result in this repo is more exposed than the length-3 ones.
+- If the **all-OR / repeated-operator share rises**, redundancy grows and **the bug dilutes**.
+
+Comparison preconditions: *Quantities* — prefix counts both sides. *Membership* — same 27
+pairs. *Reference* — length-3 distribution above, same K/alpha/units. *Discrimination* — the
+two directions give opposite conclusions. *Power* — full census, no sampling. *Sentinels* —
+pairs whose length-4 optimum is unreachable (timeout) are bucketed, not counted as either.
+
+---
+
+# UPSTREAM — a diagnostic users can run with no code change
+
+Added to the report. It requires no patch and no access to internals:
+
+> **Count the prefixes that reach your optimum. If `n = 1`, you have no redundancy against an
+> unsound prune.**
+>
+> Equivalently, and computable by inspection of the returned formula: **if its two operators
+> differ, there is exactly one construction path to it.** Repeated operators commute and give
+> you 2-3 alternative paths; mixed operators give you one.
+>
+> Measured here: 9 of 27 units had a single-prefix optimum, and **both observed losses were in
+> that group — 2 of 9, 22%**, against 0 of 18 among units with a redundant prefix.
+
+This is offered alongside the two remedies, not instead of them. It tells a user which of
+their results are at risk; it does not make the search sound.
