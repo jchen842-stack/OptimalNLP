@@ -1262,3 +1262,104 @@ and it was running 3 cases out of 27.
 This attaches to every "10/10, no CANNOT VERIFY" claim in this repo, and to the new 11/11:
 **the suite verifies that we fed the method the right data. It does not verify that the
 method computed the right answer**, except at check 10, on the pairs check 10 happens to run.
+
+---
+
+# K STAMP, and three corrections to the corrections
+
+2026-08-01.
+
+## K is 15 on every "true in-grammar max" figure in this file
+
+Checked rather than assumed, because a K mismatch between the search and the oracle would
+have invalidated every miss count. `exp_beam_width.py:51` sets `K = 15`, and experiment 2b
+(`exp_beam_optimal.py`), the 27-pair oracle (`test_bruteforce_oracle_all27.py`), the
+falsification test and the no-prune build all import that same symbol.
+`tests/test_bruteforce_oracle.py:160` hardcodes 15. The concept list is identical in all of
+them (`rts.ARMS["all"][1] == rtm.CATEGORIES`, verified at runtime).
+
+**Every "true in-grammar max", every miss count, and every gap figure in the 2b, retraction,
+recount and no-prune sections is at: K = 15, length 3, M = 24,199 tokens, min_support 5,
+arm `all`.** The 30,375-formula space is `K*(3K)^(L-1)` at those values.
+
+The only K = 50 numbers anywhere in this file are the exposure counts below. They are counts
+of candidate formulas, not optima, and they are not comparable to any K = 15 figure.
+
+## WITHDRAWN: the supersession of the exposure table
+
+An earlier instruction here was to supersede the exposure table on the grounds that F2/F4
+showed both estimator branches unsound, so every formula is exposed. **That is withdrawn, and
+the reason is a flaw in my own test.**
+
+The falsification harness patched `optimal_utils.are_disjoint` itself, and that function has
+**nine** call sites (`utils/optimal_utils.py:170, 187, 199, 200, 205, 209, 210, 269`, plus
+its own recursion). Only `:269` is the fork under test. The other eight feed
+`compute_disjoint_info` and the path-heuristic's disjointness reasoning. So F2/F4's five
+regressions cannot be attributed to the fork: they may come from any of the other eight.
+
+**"Both branches are unsound" is NOT established.** What is established is F1 — the named
+function was definitely disabled (single call chain, verified in the call graph) and neither
+miss recovered, so the disjoint-branch *hypothesis* is dead. F2 and F4 are uninterpretable as
+written and are downgraded to "not evidence of anything yet".
+
+**Status of the exposure table: UNRESOLVED.** The 4.05% / 15.48% figures stay exactly as
+recorded. What they bound and do not bound:
+
+- They **do** bound the count of length-3 candidate formulas at K = 50 whose shape is
+  `(A OR B)` then `AND C` / `AND NOT C` with A, B disjoint — the shape both observed misses
+  have. 4.05% restricts A, B to same-category; 15.48% uses actual disjointness, which is what
+  `are_disjoint` tests.
+- They do **not** bound the failure surface, because the cause is unidentified and may not be
+  the disjoint path at all.
+- They are **not** a rate for 2/27, which counts pairs, not formulas.
+
+A fork-only rerun — intervening at `utils/optimal_utils.py:271` so that exactly one call site
+changes — is required to replace F2/F4. Until that runs, neither "one branch" nor "both
+branches" is supported.
+
+## CODE_WALKTHROUGH.md restored, and what its deletion rationale got wrong
+
+Restored from `0063b8a`. Commit `733ff0c` removed it reasoning "No longer needed. Nothing
+referenced it, so no links break."
+
+**"Nothing referenced it" does not establish that a reference document is unused.** A
+walkthrough exists to be *read*, and its value is the citations it carries outward, not the
+inbound links it collects. Inbound-link count measures whether other documents point at it;
+it says nothing about whether the evidence it holds exists anywhere else. Here it did not:
+deleting the file removed **99 `file:line` citations**, and afterwards the four `src/`
+modules had **no `file:line` citation backing anywhere in the tree** — 31 citations across
+`real_token_search.py` (13), `real_token_masks.py` (11), `real_activations.py` (7) and
+`synthetic_overlap_sweep.py` (7). The upstream side survived only incidentally, because
+VERIFICATION.md and this file cite `optimal.py` independently.
+
+The generalisable form, and it is the same shape as the check-10 sample-size finding: **a
+zero inbound-reference count is a statement about the rest of the corpus, not about the
+document.** The deletion test should have been "is this evidence reproduced elsewhere", which
+it was not.
+
+### Citation drift, measured not asserted
+
+`verify/check_walkthrough_citations.py` resolves all 99 citations against the current trees.
+It does **not** edit them; this pass measures.
+
+```
+MATCH       39     cited range still holds the anchor the prose names
+MOVED       35     anchor exists, at a different line (new line reported)
+NO_ANCHOR   25     no identifier extractable from the prose -- needs a human
+FILE_GONE    0
+```
+
+The document's own header claims all citations were verified against `f1bace0`, and that
+upstream citations "are pinned at 70805299 and do not drift". **The second claim is the one
+to be careful with**: upstream citations resolve against the *patched* tree, not the pinned
+one, because `patches/0001-frontier-beam-fallback.patch` inserts ~21 lines into `optimal.py`.
+A first version of this checker resolved upstream paths against `.upstream-clean` first and
+reported 42 MOVED; resolving against whichever tree actually holds the anchor gives 35. The
+7-citation difference was a resolution artefact of my checker, not drift in the document —
+recorded because it is exactly the kind of number that would otherwise have gone into prose.
+
+25 NO_ANCHOR citations are not auto-checkable at all. The document's "98 citations
+re-verified" claim covers a set that this tooling can only confirm for 39 of 99, and 99 is
+itself one more than the 98 the header claims.
+
+Citations were deliberately not hand-fixed in this pass.

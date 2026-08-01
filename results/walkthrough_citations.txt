@@ -1,0 +1,93 @@
+CODE_WALKTHROUGH.md — 99 file:line citations resolved
+
+  MATCH       39
+  MOVED       35
+  NO_ANCHOR   25
+  FILE_GONE    0
+
+  file                                MATCH  MOVED  NO_ANC  GONE
+  check_patch_noop.py                     0      1       0     0
+  compositional/formula.py                2      0       0     0
+  compositional/optimal.py                2      0       2     0
+  formula.py                              5      1       1     0
+  mask_utils.py                           1      1       1     0
+  models.py                               1      1       2     0
+  optimal.py                              8      7       9     0
+  optimal_utils.py                        1      5       2     0
+  path_heuristic.py                       0      2       1     0
+  real_token_search.py                    0      0       1     0
+  src/real_activations.py                 6      1       0     0
+  src/real_token_masks.py                 6      4       1     0
+  src/real_token_search.py                3      7       2     0
+  src/synthetic_overlap_sweep.py          3      1       0     0
+  synthetic_overlap_sweep.py              1      2       0     0
+  utils/constants.py                      0      0       1     0
+  utils/mask_utils.py                     0      1       1     0
+  utils/optimal_utils.py                  0      1       1     0
+
+  --- MOVED (35): cited range no longer holds the anchor ---
+    src/real_token_masks.py:40        [repo] anchor `header` now at [39, 47, 57]
+    src/real_token_masks.py:65-74     [repo] anchor `load_sentences` now at [44]
+    src/real_token_masks.py:50-53     [repo] anchor `load_sentences` now at [44]
+    models.py:244       [nli-code] anchor `TextEncoder` now at [234]
+    src/real_activations.py:104       [repo] anchor `pad_packed_sequence` now at NOT FOUND in file
+    utils/mask_utils.py:160-162   [upstream-pinned] anchor `compute_quantities` now at NOT FOUND in file
+    src/real_token_search.py:253       [repo] anchor `instrumentation` now at NOT FOUND in file
+    src/real_token_search.py:254       [repo] anchor `expand_budget` now at [221, 239, 243, 247]
+    src/real_token_search.py:273-277   [repo] anchor `finally` now at [272]
+    path_heuristic.py:665-670   [upstream-pinned] anchor `estimate_paths_iou` now at [330]
+    optimal.py:392       [upstream-pinned] anchor `estimate_paths_iou` now at [366]
+    optimal.py:392       [upstream-pinned] anchor `heapq` now at [4, 98, 427, 490]
+    utils/optimal_utils.py:142-153   [upstream-pinned] anchor `common` now at [24, 55, 57, 123]
+    optimal_utils.py:512-520   [upstream-pinned] anchor `common_uncovered` now at [25, 64, 71, 91]
+    optimal.py:444       [upstream-pinned] anchor `reduce_frontier` now at [412]
+    optimal_utils.py:512-520   [upstream-pinned] anchor `union` now at NOT FOUND in file
+    path_heuristic.py:380       [upstream-pinned] anchor `branch` now at NOT FOUND in file
+    optimal.py:554-582   [upstream-pinned] anchor `expand_node` now at [516]
+    src/real_token_search.py:232       [repo] anchor `masks_info` now at [266]
+    mask_utils.py:160-162   [upstream-pinned] anchor `masks_info` now at [218, 219]
+    synthetic_overlap_sweep.py:205-207   [repo] anchor `against` now at NOT FOUND in file
+    optimal_utils.py:304-311   [upstream-pinned] anchor `get_neuron_quantities` now at [287]
+    optimal_utils.py:143-153   [upstream-pinned] anchor `compute_quantities_vector` now at [109]
+    optimal_utils.py:477       [upstream-pinned] anchor `compute_min_iou_from_label_info` now at [431]
+    optimal.py:697       [upstream-pinned] anchor `compute_min_iou_from_label_info` now at NOT FOUND in file
+    src/real_token_search.py:277       [repo] anchor `finally` now at [272]
+    src/synthetic_overlap_sweep.py:262       [repo] anchor `finally` now at [260]
+    check_patch_noop.py:53        [repo] anchor `best_iou` now at [70, 71]
+    optimal.py:702-705   [upstream-pinned] anchor `pop` now at NOT FOUND in file
+    synthetic_overlap_sweep.py:113-115   [repo] anchor `peak_frontier` now at [274, 295]
+    src/real_token_search.py:277       [repo] anchor `finally` now at [272]
+    src/real_token_search.py:73-74     [repo] anchor `scoring` now at [72]
+    optimal.py:822-838   [upstream-pinned] anchor `path` now at [390, 500, 505, 507]
+    formula.py:90        [upstream-pinned] anchor `operators` now at [32, 202, 242]
+    src/real_token_masks.py:114       [repo] anchor `md` now at NOT FOUND in file
+
+  --- NO_ANCHOR (25): not auto-checkable, needs a human ---
+    src/real_token_masks.py:71-72 [repo]
+    models.py:259 [nli-code]
+    src/real_token_search.py:237 [repo]
+    src/real_token_search.py:265 [repo]
+    optimal.py:392-400 [upstream-pinned]
+    utils/constants.py:22-25 [upstream-pinned]
+    optimal.py:597-626 [upstream-pinned]
+    optimal.py:693-916 [upstream-pinned]
+    optimal.py:695 [upstream-pinned]
+    formula.py:229 [upstream-pinned]
+    utils/mask_utils.py:160-162 [upstream-pinned]
+    path_heuristic.py:47 [upstream-pinned]
+    optimal_utils.py:470-472 [upstream-pinned]
+    utils/optimal_utils.py:40-42 [upstream-pinned]
+    optimal_utils.py:75-97 [upstream-pinned]
+    compositional/optimal.py:697 [upstream-pinned]
+    optimal.py:761-763 [upstream-pinned]
+    optimal.py:401-404 [upstream-pinned]
+    mask_utils.py:160 [upstream-pinned]
+    optimal.py:924 [upstream-pinned]
+    optimal.py:268-315 [upstream-pinned]
+    compositional/optimal.py:412-428 [upstream-pinned]
+    optimal.py:424-425 [upstream-pinned]
+    real_token_search.py:321-322 [repo]
+    models.py:244 [nli-code]
+
+NOTE: citations were NOT edited by this pass. Drift is reported, not fixed.
+RESULT: PASS (no missing files)

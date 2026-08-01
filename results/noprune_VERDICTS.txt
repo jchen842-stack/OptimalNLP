@@ -1,0 +1,41 @@
+
+N1  ALL 27 MATCH THE BRUTE-FORCE ORACLE EXACTLY.
+    With pruning fully off, every one of the 27 pairs returns the true in-grammar length-3
+    optimum, to within 1e-12, including the two that miss under the published config
+    (trained a=0.2 unit88, trained a=0.05 unit86).
+    SUPPORTED only if 27/27 match.
+    If ANY pair still misses, the fault is NOT the ceiling estimate -- it is in expansion,
+    dedup, or the grammar walk. That is a larger finding than the current one and the run
+    stops there and reports it.
+
+N2  RUNTIME RISES BUT STAYS UNDER THE CAP.
+    All 27 complete without hitting the 1500s soft cap, and the median runtime is higher
+    than the published config's. Reported as a factor.
+    A factor near 1.0x would mean the substitutions did not take effect and the whole run
+    is void -- which is why each substitution also asserts its own match count.
+    SUPPORTED if 0 halts AND median(noprune) > median(published).
+
+N3  CONTROL — NO PAIR GETS WORSE.
+    Removing pruning cannot cost IoU. No pair returns a lower IoU than the published run.
+    This could fail: if it does, the config is not a pure relaxation and N1 is not
+    interpretable as "the ceiling was the whole fault".
+    SUPPORTED if min over pairs of (noprune_iou - published_iou) >= -1e-12.
+
+N4  CONTROL — THE SEARCH ACTUALLY DID MORE WORK.
+    Visited-node count rises on every one of the 27 pairs. A pair where visited is unchanged
+    was not affected by the relaxation at all, which would make its N1 result uninformative.
+    SUPPORTED if visited_noprune > visited_published on all 27.
+
+[no-prune] source: /Users/justin/projects/optimalce-nlp/.upstream-clean/compositional/optimal.py
+  applied 1x: # NO-PRUNE: threshold prune disabled.
+  applied 1x: if False:  # NO-PRUNE: minimum_threshold pinned
+  applied 1x: if True:  # NO-PRUNE: >0 gate disabled
+  applied 1x: if False:  # NO-PRUNE: invariant no longer applies
+  applied 1x: if False:  # NO-PRUNE: incumbent skip disabled
+  applied 1x: minimum_threshold = 0.0  # NO-PRUNE
+  applied 1x: minimum_threshold = 0.0  # NO-PRUNE
+  applied 1x: minimum_threshold = 0.0  # NO-PRUNE
+
+[no-prune] 24199 tokens | K=15 length=3 | 27 pairs
+
+in-grammar optima (brute force) ...
