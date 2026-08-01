@@ -122,6 +122,7 @@ def main():
           f"({st.median(times) / FLAT_MEDIAN_TIME:.2f}x); max {max(times):.1f}s")
 
     addenda_scoring(part, flat)
+    score_p7(part, flat)
 
     if a or b:
         print("\n  D5.0's founding frontier-explosion observation is substantially a")
@@ -208,3 +209,68 @@ def addenda_scoring(part, flat):
           f"ratio {me / fe:.2f}x")
     print("  expanded down + time up  => bounds tightened, per-sample arithmetic absorbed it")
     print("  expanded flat + time up  => no bound tightening; cost is pure arithmetic")
+
+# =====================================================================================
+# P7 — registered 2026-08-01, verified before registration that results/partition_L4.csv
+# did not exist (L4 run at 38:28 elapsed, still in flight).
+#
+# P7 is the COMPETING hypothesis to P5(b). Both are scored; they cannot both hold.
+# =====================================================================================
+P7 = """
+P7  P5(b) FAILS: THE FRONTIER IS NEAR-INVARIANT UNDER REPARTITION.
+    Matched-set median peak frontier at length 4 does NOT halve, and lands within ~1.2x of
+    the matched flat baseline.
+    Scored as two conditions, both required:
+      P7a  ratio >= 0.5          (P5(b) fails -- no halving)
+      P7b  1/1.2 <= ratio <= 1.2 (near-invariance, not merely "not halved")
+
+    RATIONALE, recorded in advance:
+      - The aggregated estimate is PARTITION-INVARIANT. SUM_x |I^C_max(L)_x| counts over all
+        (x, j) pairs, and Top^A_t / Bott^A_1 are concept-wise over dataset-wide totals. None
+        of these depends on how elements are grouped into samples.
+      - Confirmed empirically at length 3: both miss-prefix ceilings are BYTE-IDENTICAL
+        across partitions -- 0.232677 (unit88 a=0.2) and 0.203398 (unit86 a=0.05).
+      - `reduce_frontier` prunes on aggregated estimates AT INSERTION (Alg 1 lines 11, 52),
+        before any refinement.
+      - Therefore frontier size should be near-invariant. Measured 0.99x at length 3 (P4).
+
+    STATED RISK, recorded so it cannot be claimed afterwards as foresight: length 4 has more
+    pops, so refinement compounds, and the effect may be NON-LINEAR IN DEPTH. A length-3
+    near-invariance does not entail a length-4 one.
+
+    IF P7 HOLDS: the length-4 wall is NOT a harness artifact, and diary D5.0 survives. The
+    superseding entry contemplated under P5 is not written.
+    IF P5(b) HOLDS INSTEAD: the wall moves and D5.0 is superseded (appended, never rewritten).
+"""
+
+
+def score_p7(part, flat):
+    import statistics as _st
+    matched = [r for r in part
+               if r["halted"] == "no"
+               and flat.get((r["arm"], r["alpha"], r["unit"]), {}).get("halted") == "no"]
+    print(P7)
+    print("--- P7 (competing hypothesis to P5(b)) ---")
+    if not matched:
+        print("  NOT SCOREABLE: no pairs terminated in both runs")
+        return
+    mp = _st.median([float(r["peak"]) for r in matched])
+    fp = _st.median([float(flat[(r["arm"], r["alpha"], r["unit"])]["peak_frontier"])
+                     for r in matched])
+    ratio = mp / fp
+    a = ratio >= 0.5
+    b = (1 / 1.2) <= ratio <= 1.2
+    print(f"  matched n={len(matched)}   flat median peak {fp:,.0f}   "
+          f"partition median peak {mp:,.0f}   ratio {ratio:.3f}x")
+    print(f"  P7a  ratio >= 0.5 (no halving) ............ {'YES' if a else 'NO'}")
+    print(f"  P7b  0.833 <= ratio <= 1.2 (near-invariant) {'YES' if b else 'NO'}")
+    print(f"  P7:  {'SUPPORTED' if (a and b) else 'NOT SUPPORTED'}")
+    print(f"  P5(b) on the same matched set: {'NO (fails)' if a else 'YES (halved)'}")
+    if a and b:
+        print("\n  => the length-4 wall is NOT a harness artifact. D5.0 survives;")
+        print("     no superseding diary entry is written.")
+    elif not a:
+        print("\n  => the wall moved. D5.0 is superseded by an APPENDED entry, never rewritten.")
+    else:
+        print("\n  => SPLIT: no halving, but outside the near-invariance band. Report as such;")
+        print("     neither P5(b) nor P7 may be claimed whole.")
