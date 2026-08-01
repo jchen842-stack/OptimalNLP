@@ -1788,3 +1788,111 @@ None is currently mis-scoring: the oracle and falsification paths never produce 
 because the guard is missing, not because a failure is known. `exp_beam_optimal.py:172` does
 handle it correctly (`best_iou if best_iou == best_iou else None`) and is the pattern to
 follow.
+
+---
+
+# PROTOCOL DEVIATION 3 — the sample axis was never registered, and it produced the misses
+
+2026-08-01. `src/exp_partition.py`, raw output `results/partition_L3.csv`.
+
+## The deviation
+
+The paper's **D** is the set of dataset inputs — images in vision, **sentences** for SNLI.
+`real_token_search.run_one` builds `bitmaps = neuron_bits.reshape(1, M)`: **one sample
+holding all 24,199 tokens.**
+
+Section E.2.2's degenerate case is "a single sample contains all the concepts in the dataset".
+**This configuration satisfies that by construction.** It is not a property of NLP, not a
+finding about token-level concepts, and not a difference between language and vision. It is a
+representation choice that was made implicitly and never written down.
+
+This is the **third protocol item**, and it is of a different kind from the first two:
+
+| | item | kind |
+|---|---|---|
+| 1 | alpha (activation range) | a **miss** — the right knob, the wrong value |
+| 2 | K (concept count) | a **scope choice** — declared, defensible, bounded |
+| 3 | **the sample axis** | **never registered at all** — no value was chosen, because no one noticed there was a choice |
+
+## Blast radius, precisely — this is NOT "everything is in question"
+
+**UNAFFECTED.** IoU is partition-invariant (Lemma 3.6): it is a ratio of two counts over the
+same element set, and regrouping elements into samples changes neither count.
+
+- every IoU value in `results/`
+- the brute-force oracle and both miss *magnitudes* (+0.9274%, +4.7434%)
+- the unique/common decomposition and `unique_elements.csv`
+- the alpha sweep, all lift figures, the trained/untrained comparison
+- the beam-vs-exact IoU gaps and the band comparisons
+
+**Verified, not asserted:** under the per-sentence partition all **27/27** pairs return the
+same in-grammar optimum, to float64 equality. That was checked first, as control V0, before
+anything else was read.
+
+**AFFECTED.** Everything computed from per-sample quantities that are then summed —
+`Top_t(Q)_x`, `Bott_1(Q)_x`, and every place `SUM_x min(a_x, b_x)` is approximated by
+`min(SUM a, SUM b)`:
+
+- every bound and ceiling
+- all pruning decisions
+- all runtime, all node counts, all peak-frontier figures
+- termination and every timeout
+
+## The result: both misses were an artifact of the single sample
+
+Per-sentence partition, 2,000 sentences, max length 57, grid 2000x57 (padding cells belong to
+no concept and to no neuron, so they are uncoverable and cannot affect IoU). Concepts, masks,
+alpha and K unchanged. Length 3, all 27 pairs.
+
+```
+V0  CONTROL   27/27 reach the brute-force optimum                       PASS
+P1  Bott_1(E^C)_x == 0 on >= 50% of sentences                           SUPPORTED
+      median 69.7% (min 62.3%, max 92.9%), against 0 of 1 flat
+P2  the 6/27 dropped-prefix exposure falls                              SUPPORTED
+P3  both known misses recover                                           SUPPORTED
+P4  expanded-node count falls at length 3                               SUPPORTED (trivially)
+```
+
+```
+pairs missing the in-grammar optimum:   flat 2/27  ->  per-sentence 0/27
+trained a=0.2  unit88   0.25454105110196174   ((dep=ROOT OR dep=nsubj) AND const=NP)
+trained a=0.05 unit86   0.21660649819494585   ((dep=ROOT OR dep=nsubj) AND tag=NN)
+```
+
+Both now return **exactly the formulas `beam_optimal` had been finding**, at exactly the
+brute-force optimum.
+
+**"Exact search is not exact" is retracted as a statement about the method.** The correct
+statement is: *under a single-sample representation that violates the paper's stated
+non-degeneracy condition, the aggregated bound is inadmissible and the search loses the
+optimum on 2 of 27 pairs. Under the paper's own sample definition it does not.* The 6/27
+ceiling-inadmissibility exposure is a property of the mis-specified sample axis, not of
+`optimal.py`.
+
+## P4 is supported by a margin too small to mean anything
+
+```
+metric      flat (1 sample)   per-sentence   ratio
+expanded            477.0          474.0     0.99x
+visited             579.0          318.0     0.55x
+peak                962.0         1143.0     1.19x
+time_s                1.0            0.9     0.91x
+```
+
+Median `expanded` fell by **three nodes**. The registered test says "falls" and it fell, so
+P4 is scored SUPPORTED, but it should not be read as evidence of tighter bounds: `visited`
+nearly halved while **peak frontier rose 19%**, which is not the signature of uniformly
+tighter pruning. Recorded as supported-and-uninformative rather than quietly upgraded into
+the bound-tightening story it was written to test.
+
+## Consequences for what is already written
+
+- The **RETRACTION** section stands: the disjoint branch was still not the cause, and F1's
+  reasoning is untouched.
+- The **targeted trace** stands as a description of *how* the loss happened in the flat
+  configuration (inadmissible aggregated ceiling, dropped by `reduce_frontier`), and it is now
+  explained *why* the ceiling was inadmissible: `Bott_1(E^C)_x` can never reach 0 with one
+  sample, so the aggregated estimator was operating outside its stated precondition.
+- Experiment 2b's beam-vs-exact numbers were computed in the flat configuration and are
+  **affected in their pruning-derived columns** (node counts, times), not in their IoUs.
+- The 4 "escaped by luck" pairs are no longer luck-dependent under the correct partition.
