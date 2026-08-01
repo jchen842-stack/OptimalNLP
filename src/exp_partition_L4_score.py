@@ -121,6 +121,9 @@ def main():
     print(f"\n  median time {st.median(times):.1f}s vs flat {FLAT_MEDIAN_TIME}s "
           f"({st.median(times) / FLAT_MEDIAN_TIME:.2f}x); max {max(times):.1f}s")
 
+    print(REGISTERED_C)
+    if report_partial(part):
+        return 0
     addenda_scoring(part, flat)
     score_p7(part, flat)
     score_p7_banded(part, flat)
@@ -373,3 +376,73 @@ def score_p7_banded(part, flat):
     else:
         v = "P5(b) HOLDS — halved. The wall moved; D5.0 superseded by an APPENDED entry."
     print(f"  {v}")
+
+# =====================================================================================
+# C1-C3 — registered 2026-08-01 with results/partition_L4.csv verified absent
+# (L4 run at 42:41 elapsed, still in flight).
+# =====================================================================================
+REGISTERED_C = """
+C1  STOP RULE FOR THE RUN, fixed before it becomes a judgement call.
+    Either ALL 27 pairs complete, or the result is reported PARTIAL:
+      - the unrun pairs are NAMED explicitly,
+      - per-pair ratios are reported for the pairs that did run,
+      - NO median is claimed,
+      - NEITHER P7 NOR P5(b) is called.
+    Rationale: stopping partway selects the FAST pairs. That compounds with the matched-set
+    selection A1 already corrected for -- two selection effects in the same direction, and
+    the median would be over pairs that are fast in the flat run, fast in the per-sentence
+    run, AND early enough to have finished. No median over that set means anything.
+
+C2  KNOWN DEFECT IN partition_L4.csv's `in_grammar_max` COLUMN — found in flight, recorded
+    before the file exists.
+    `exp_partition.py:130` enumerates the brute-force optimum at a HARDCODED DEPTH OF 3
+    (`for i ... for m2 in mv(...) ... for m3 in mv(m2)`), regardless of `PART_LENGTH`. So in
+    partition_L4.csv the `in_grammar_max` and `missed` columns hold the LENGTH-3 optimum,
+    not the length-4 one.
+    Already visible in the run log: `trained a=0.1 unit396: part=0.146338 true=0.145326` --
+    the length-4 search legitimately EXCEEDS the length-3 optimum, which is correct
+    behaviour and a wrong comparison.
+    Consequences, fixed in advance:
+      - `in_grammar_max` and `missed` in partition_L4.csv are VOID. They are not read, and
+        the columns are labelled in the file rather than deleted.
+      - The V0 control is UNAFFECTED: it compares part_iou against the FLAT length-4
+        exact_IoU from beam_vs_exact_K15.csv, not against this column.
+      - P5(b)/P7/B1/B2 are UNAFFECTED: they are peak-frontier ratios and never touch it.
+      - A length-4 miss count REQUIRES a genuine length-4 brute force: K*(3K)^3 = 1,366,875
+        formulas x 27 pairs. Not run, and NOT claimed from this file.
+
+C3  P8 — THE FIXED-P2 SHAPE, pre-registered because it is predictable from what is known.
+    Columns: (inadmissible ceiling) / (prefix expanded before ANY copy of it was dropped) /
+    (optima actually lost).
+
+        flat (one sample)   6 / 4 / 2
+        per-sentence        5 / 5 / 0        <- P8
+
+    SUPPORTED if the per-sentence row is exactly 5 / 5 / 0.
+    If P8 holds, the finding is reported AS THE PAIR OF ROWS, not as a miss count: the
+    defect is near-constant (6 -> 5) while realised harm went 2 -> 0, and the ENTIRE
+    difference is pop ordering.
+    IF ANY per-sentence prefix was NOT expanded before being dropped, there is a loss we
+    have not observed, and the 0/27 result needs re-examining before anything is claimed
+    from it.
+    Note: P8 is about the LENGTH-3 partition run, which is complete. It does not depend on
+    L4 and is not blocked by C2.
+"""
+
+
+def report_partial(part):
+    """C1: name the unrun pairs and refuse a median."""
+    from exp_beam_width import PAIRS as _P
+    expected = {(a, al, f"unit{u}") for a, al, us in _P for u in us}
+    got = {(r["arm"], r["alpha"], r["unit"]) for r in part}
+    missing = sorted(expected - got)
+    if not missing:
+        return False
+    print("\n*** C1 STOP RULE FIRED: PARTIAL RESULT ***")
+    print(f"  {len(got)} of 27 pairs completed; {len(missing)} did not run:")
+    for k in missing:
+        print(f"    {k[0]} a={k[1]} {k[2]}")
+    print("  NO median is claimed. NEITHER P7 NOR P5(b) is called.")
+    print("  Stopping partway selects the fast pairs, compounding with the matched-set")
+    print("  selection A1 corrected for -- two selection effects in the same direction.")
+    return True
