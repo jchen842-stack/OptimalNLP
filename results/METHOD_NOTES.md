@@ -1896,3 +1896,145 @@ the bound-tightening story it was written to test.
 - Experiment 2b's beam-vs-exact numbers were computed in the flat configuration and are
   **affected in their pruning-derived columns** (node counts, times), not in their IoUs.
 - The 4 "escaped by luck" pairs are no longer luck-dependent under the correct partition.
+
+---
+
+# LENGTH-3 PARTITION — the full result, including the part that does not fit
+
+2026-08-01. Reported before the length-4 run landed, so none of it is shaped by that outcome.
+
+## Precondition: IoU is partition-invariant — VERIFIED, all 27
+
+```
+same    25/27      HIGHER   2/27      LOWER   0/27
+```
+
+`LOWER = 0` is the requirement. The two HIGHER pairs are exactly the two the flat run lost:
+
+```
+trained a=0.2  unit88    flat 0.252200  ->  per-sentence 0.254541  = true in-grammar max
+trained a=0.05 unit86    flat 0.206800  ->  per-sentence 0.216606  = true in-grammar max
+```
+
+The repartition is correct, so P3 is readable.
+
+## P3 — CONFIRMED as a result
+
+**Both misses recovered. 2/27 -> 0/27.** Under the per-sentence partition the search returns
+the true in-grammar optimum on all 27 pairs, and on the two formerly-missed pairs it returns
+exactly the formulas `beam_optimal` had been finding:
+
+```
+trained a=0.2  unit88   0.25454105110196174   ((dep=ROOT OR dep=nsubj) AND const=NP)
+trained a=0.05 unit86   0.21660649819494585   ((dep=ROOT OR dep=nsubj) AND tag=NN)
+```
+
+## P1 — SUPPORTED, large
+
+```
+fraction of sentences with Bott_1(E^C)_x == 0 :  min 0.623   median 0.697   max 0.929
+flat (one sample)                             :  0 of 1
+```
+
+## P2 — SUPPORTED ONLY NOMINALLY, AND IT UNDERCUTS THE REGISTERED READING OF P3
+
+This is the measurement that had to be made, and it does not say what the P3 result invited
+us to assume.
+
+```
+prefixes with an INADMISSIBLE ceiling   flat 6/27  ->  per-sentence 5/27
+of those, dropped by reduce_frontier    flat 6/6   ->  per-sentence 5/5
+```
+
+The exposure fell by **one pair**, and the set **churned** rather than shrinking:
+
+```
+became admissible : untrained a=0.1 unit413, untrained a=0.05 unit413
+became INADMISSIBLE (new, worse under the partition) : trained a=0.1 unit88  (-0.020312 -> +0.015224)
+still inadmissible: trained a=0.2 unit88, trained a=0.05 unit86, trained a=0.1 unit396,
+                    untrained a=0.1 unit88
+```
+
+**Both formerly-missed prefixes still have an inadmissible ceiling, at byte-identical values**
+— `0.232677` for unit88 and `0.203398` for unit86, unchanged from the flat run — **and both
+are still dropped.** So P3 did **not** pass because those ceilings became admissible. They did
+not.
+
+**P3 passed for a reason this experiment has not identified.** Registered mechanism A3 —
+refine-on-pop becoming non-trivial at |D| ~ 2,000 — remains the leading candidate and is
+consistent with the ceilings being unchanged while the outcome changed, but it is **not
+demonstrated here**. Stated plainly so it is not quietly upgraded: *the misses recover under
+the per-sentence partition; why they recover is open.*
+
+A defect in the P2 metric itself, recorded rather than patched after the fact: `dropped` is
+`any(scan where the node sat below threshold)`, which does **not** imply the optimum was lost.
+A node can be expanded early — producing the winning child — and its stale frontier copy
+dropped later as the threshold rises. That is normal and harmless. In the flat run the drop
+demonstrably caused the loss because the loss was observed; under the partition 5 prefixes are
+dropped and 0 optima are lost, which is exactly the case the metric cannot distinguish. **The
+exposure counts are an upper bound on harm, not a measure of it.**
+
+## P4 — SUPPORTED, uninformative, matched set
+
+All 27 terminated in both runs, so the matched set is all 27.
+
+```
+median expanded   flat 477  ->  per-sentence 474   ratio 0.99x
+```
+
+Three nodes. Recorded as supported-and-uninformative, per A1/A2.
+
+## Mid-run process check (registered as a check, not assumed)
+
+```
+pgrep matches : 1        PID 65052        child processes : 0
+process started       : Sat Aug  1 15:38:09 2026
+docstring commit b7bff63 : 2026-08-01 15:50:38 -0700
+```
+
+The process started **12.5 minutes before** the docstring commit, is a single PID with **zero
+children**, and Python binds module source at import. Nothing re-imports or forks, so the
+mid-run edit cannot have reached the running search. Checked, not assumed.
+
+---
+
+# UPSTREAM REPORT — drafted before the length-4 result exists
+
+Framing fixed now so it cannot be written to fit that outcome.
+
+**This is not a bug in the method. It is an unguarded precondition.**
+
+1. **What happens.** With `|D| = 1` the aggregated heuristic's admissibility fails and the
+   exact search can drop the branch holding the optimum. Measured: 2 of 27 (arm, alpha, unit)
+   pairs at K=15, length 3, M=24,199 return a strictly sub-optimal in-grammar formula
+   (+0.9274% and +4.7434% below the brute-force optimum).
+
+2. **Why.** Admissibility of the aggregated form depends on `Bott_1(E^C)_x = 0`. Paper
+   Section E.2.2 states the violating case is "rare" and "not observed in any of the datasets
+   tested". Measured here: `Bott_1(E^C)_x = 859`, on 1 of 1 samples — **100%**, and 859 is an
+   order of magnitude from zero, not marginal.
+
+3. **How it was reached.** By our own harness: `real_token_search.run_one` builds
+   `bitmaps = neuron_bits.reshape(1, M)`, putting the entire corpus in a single sample. That
+   satisfies E.2.2's degenerate condition *by construction*. **The caller did this, not the
+   method.**
+
+4. **The actual defect: the code does not detect it.** `optimal.py` computes the aggregated
+   estimate unconditionally. There is no assertion, no warning, and no fallback to the sample
+   form when the precondition fails. A caller who partitions their data wrongly — or who, like
+   us, does not realise the sample axis is a modelling choice — gets silently sub-optimal
+   answers from a function documented as exact.
+
+5. **Proposed fix, to offer rather than assert:** an assertion or warning at
+   `get_optimal_heuristic_info` when `Bott_1(E^C)_x != 0` on any sample, naming the
+   precondition and pointing at E.2.2. Cheap to compute; it is already a by-product of the
+   quantity helpers.
+
+6. **Reproduction to supply:** `tests/test_bruteforce_oracle_all27.py` (2/27 miss, exact
+   values recorded), `src/exp_partition.py` (0/27 under the per-sentence partition), and the
+   `Bott_1` measurement above.
+
+**Every miss measurement is kept.** The 2/27, the two IoU gaps, the ceilings, the thresholds,
+the targeted trace — all stand exactly as recorded. **Their cause changed; their existence did
+not.** What is retracted is only the claim that they characterise `optimal.py` rather than our
+configuration of it.
