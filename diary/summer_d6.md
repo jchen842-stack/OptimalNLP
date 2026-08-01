@@ -36,6 +36,7 @@ verdict rather than an error.
 | 3 | **Expanded-count vs formula-space** | `K*(3K)^(L-1)` formula-space ratios (24.0x, 12.4x) | measured **wall-clock** ratios (83.2x, 36.6x) | the P1 "cancellation" finding, withdrawn |
 | 4 | **`nan` sentinel** | `true - x > tol` | `x` was `nan` / `None` / no-solution | 12 no-label runs scored as successes; 10 comparison sites still unguarded |
 | 5 | **Treatment-dependent median membership** | all-27 median | timed-out peaks are truncated, and membership moves with the treatment | corrected to a matched set before the L4 run (A1) |
+| 8 | **Exposure metric tracked one arbitrary prefix** | one representative prefix of the optimum | the optimum is a **set** of 1-3 prefixes | a "never entered frontier" pair lost nothing, which the 3-column shape could not express |
 | 7 | **Item 3 blocked on an uncomputed effect size** | asserted "order 7 drops, enough to move a between-arm comparison" | measured ~0.21% against a 64.7% gap | computed when the block was challenged |
 | 6 | **Depth-3 reference under a depth-4 search** | `in_grammar_max` enumerated at hardcoded depth 3 | a `PART_LENGTH=4` search | `part=0.146338 > true=0.145326` in the run log |
 
@@ -125,7 +126,17 @@ a verdict carries these six fields, stated before the comparison runs.**
 | 6 | Depth-3 reference under a depth-4 search | **Reference** — enumeration depth did not match search length |
 | 7 | Item 3 blocked on an uncomputed effect size | **Discrimination** (decision form) — no magnitude computed |
 
-**7 of 7 caught. All six fields fire at least once.**
+**8 of 8 caught. All six fields fire at least once.**
+
+Instance 8 fires on **Membership**: *which set is being compared over?* The exposure metric
+never specified whether its subject was one prefix or the set of optimal prefixes, and the
+answer changes the figure from 6/27 to 14/27.
+
+**This is evidence FOR the checklist under the commitment made above, not against it.**
+Instance 8 was found *by applying an existing field*, not by an eighth failure escaping all
+six. The commitment was that an uncaught instance becomes a seventh field; this one was
+caught, so no field is added. Recorded explicitly because "the checklist worked" is a claim
+that needs the same scrutiny as any other.
 
 ### The retro-validation is weak evidence, and saying so is the point
 

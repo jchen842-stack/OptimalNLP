@@ -2349,3 +2349,84 @@ Registered now, before the run is scheduled.
 | **Discrimination** | state in advance what result would count against the paper's setting reproducing, distinct from "the corpus build failed". |
 | **Power** | at alpha=0.005 the flat corpus had **7 of 512 trained units excluded** by `min_fire`; at M ~ 80,000 that changes. Report eligible-set size before sampling. |
 | **Sentinels** | **`beam_optimal` never returns `None`** — verified, C1, 0 of 162 runs. The frontier cap returns no formula on 8/27 at width 5. **This is why item 5 must run `beam_optimal`**, and the immunity claim is void if the frontier cap is used instead. |
+
+---
+
+# THE EXPOSURE METRIC'S SUBJECT WAS UNDER-SPECIFIED — recomputed over the optimal SET
+
+2026-08-01. Triggered by the P8 sentinel gap: 3 per-sentence pairs and 1 flat pair had
+"P* never entered the frontier" while losing nothing.
+
+## Item 1 — what those pairs did: possibility (a), confirmed
+
+All four returned the **true max**, by a formula with a **different prefix** than the one the
+audit was tracking:
+
+```
+flat  trained a=0.1  unit92    0.159328 = true   (dep=pobj OR lemma=.)
+part  trained a=0.1  unit92    0.159328 = true   (dep=pobj OR lemma=.)
+part  trained a=0.05 unit412   0.098051 = true   ((tag=IN AND (NOT const=VP)) OR lemma=.)
+part  untrained a=0.1 unit510  0.154405 = true   ((dep=pobj AND (NOT const=VP)) OR lemma=.)
+```
+
+Not (b) — the detection was correct: that particular prefix genuinely never entered. Not (c) —
+they were in the loss count and correctly scored 0. **The metric was tracking one arbitrary
+member of a set.**
+
+## Item 2 — the optimum is a unique mask reached by up to 3 prefixes
+
+From the existing enumeration, no new search:
+
+```
+distinct OPTIMAL formulas (masks) per pair : min 1   median 1   max 1     <- unique on all 27
+distinct OPTIMAL PREFIXES  per pair        : min 1   median 2   max 3
+pairs with a SINGLE optimal prefix         : 9/27
+pairs whose optimum is reachable at length <= 2 : 1/27
+```
+
+The optimal **mask** is unique on every pair. What varies is how many distinct length-2
+prefixes construct it — the same final mask is reachable by different orderings within the
+left-deep grammar.
+
+### Redefined: EXPOSED if any optimal prefix is inadmissible; LOST if all are pruned
+
+```
+                         EXPOSED        LOST (bound)     ACTUAL misses
+flat one-sample          14/27            4/27              2/27
+per-sentence             13/27            4/27              0/27
+
+old figures (one arbitrary representative prefix):  6/27 and 5/27
+```
+
+**The old 6/27 and 5/27 are relabelled: computed over one arbitrary representative prefix.**
+The set-based exposure is **more than twice as high** — 14/27 flat — because with 1-3 prefixes
+per optimum, at least one being inadmissible is common.
+
+**LOST remains a BOUND, not a measurement.** 4/27 both ways against 2 and 0 actual, because a
+prefix can be pruned *after* it has already been expanded — the pop-ordering effect. The
+measuring version is still the per-node event-ordering question (was the prefix expanded
+before any copy was dropped), which is the held item-4 code change.
+
+### "Escaped by luck" is now a measured corpus property
+
+**Both actual flat misses have a single-prefix optimum** (trained a=0.2 unit88, trained a=0.05
+unit86, both `n_prefixes = 1`). The two pairs the bound flags but that did not lose
+(trained a=0.1 unit396, untrained a=0.1 unit413) both have `n_prefixes = 2`.
+
+So the phrase retires: **"escaped by luck" was "the optimum had more than one prefix".** It is
+a property of the corpus and the grammar, measurable in advance, and **9 of 27 pairs do not
+have it** — those are the vulnerable ones.
+
+## Item 4 — the loss happens one level shallower than the metric looks
+
+A prefix that **never entered the frontier** means **an ancestor of it was pruned**. The
+metric was asking about level 2 while the bite had already happened at level 1.
+
+The never-entered count moved **1/27 flat -> 3/27 per-sentence**. Under this reading, **the
+partition pushed the bite up a level**: fewer level-2 prefixes carry an inadmissible ceiling
+(14 -> 13 exposed), but more optimum-carrying prefixes never get created at all because
+something shallower was cut first.
+
+**The general form of the exposure question is: "was any ancestor of any optimal formula
+pruned?"** — not "was P pruned". Every exposure figure in this file, including the 14/27 above,
+answers the narrower question and is therefore still a lower bound on true exposure.
