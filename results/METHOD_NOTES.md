@@ -2203,3 +2203,79 @@ the aggregated estimate was introduced to avoid. At |D| ~ 2,000 that is a large 
 should be presented to upstream as one, not as a free correctness fix. Remedy (b), the
 assertion, is cheap but only reports the violation; and per the partition-invariance result, a
 compliant partition is not sufficient either.
+
+---
+
+# TERMINOLOGY — "beam" names two different mechanisms in this file
+
+Fixed before item 5 runs, because item 5's immunity claim depends on which one is meant.
+
+| | **`beam_optimal`** | **`_apply_beam_cap` / `MAX_FRONTIER_SIZE`** |
+|---|---|---|
+| whose code | **upstream**, `compositional/beam_optimal.py` | **ours**, `patches/0001-frontier-beam-fallback.patch` |
+| what it is | the paper's beam: level-wise over **complete formulas ranked by exact IoU** (`search_utils.beam_search`, `PriorityQueue(beam_limit)`) | a cap on `optimal.py`'s A* frontier, **top-N by estimated ceiling** |
+| shares `expand_node`? | **no** — expands via `search_utils.compute_next_search_space:102-129` | yes, it is `optimal.py` |
+| uses the aggregated estimate as a **pruning bound**? | **NO** — ranks by exact IoU | **YES** — inherits every soundness property of `optimal.py` |
+| failure mode | approximation only; always returns a formula | **returns NO formula at all** — 8/27 at width 5, 3/27 at 10, 2/27 at 25 |
+| measured at L3, width 200 | **27/27 true-optimal, gap +0.00%** | 18/27 true-optimal |
+
+**Everything in this file before the 2a/2b sections that says "beam" unqualified means the
+frontier cap**, because that is what the project used throughout Phase A and Phase B. That
+includes the D5-era passages quoted above about "beam vs exact", the §4.3 discussion, and the
+beam-vs-exact band comparisons. Read them as *frontier cap*, not as the paper's beam.
+
+**Consequence for item 5 (alpha=0.005, beam-only).** The immunity claim — that a beam-only run
+is unaffected by the aggregated-estimate soundness defect — **holds only for `beam_optimal`**.
+`beam_optimal` ranks by exact IoU and never prunes on the aggregated bound, so the defect
+cannot reach it. The frontier cap prunes on exactly that bound and additionally has its own
+no-solution failure mode. **Item 5 must run `beam_optimal`, and this must be stated in its
+pre-registration, not assumed.**
+
+---
+
+# ITEM 3 — confound bounded, and unblocked
+
+Item 3 (scale to ~50 units per arm, length 3, alpha=0.05, K=15) was blocked on the concern
+that OR-of-same-category-then-narrowing might not be equally frequent across the trained and
+untrained arms — a confound aligned with the experiment's independent variable. The magnitude
+is now computable and was not computed at the time.
+
+**Worst case, all losses falling on one arm:**
+
+```
+miss rate                2/27                        = 0.0741
+mean loss magnitude      (+0.9274% + 4.7434%)/2      = 0.0284
+worst-case arm shift     0.0741 x 0.0284             = 0.210%
+trained/untrained gap    (3.41 - 2.07)/2.07          = 64.7%
+ratio                                                  ~1/308
+```
+
+**A ~0.21% shift against a 64.7% effect. Roughly 1 part in 300.** The confound cannot move the
+trained/untrained separation.
+
+**Caveat, and it is a real one:** the loss magnitudes are **n = 2**. This is an
+order-of-magnitude argument, not a bound. A third loss an order of magnitude larger than the
+observed two would change the arithmetic, and nothing observed rules that out.
+
+**Corroboration from a different direction:** the flat exposure splits **3 trained / 3
+untrained** (trained a=0.2 unit88, a=0.1 unit396, a=0.05 unit86; untrained a=0.1 unit88,
+a=0.1 unit413, a=0.05 unit413). The at-risk structure is not concentrated in either arm, which
+is the specific thing the block was worried about.
+
+**Item 3 moves above item 4 and below item 5.**
+
+---
+
+# L4 VERIFICATION — re-sequenced
+
+The C2 revision makes the cheap half free, so it runs first.
+
+**(a) One-sided check, no oracle.** Since `max_length` is a maximum, the length-4 space
+contains the length-3 space, so `part_L4 < true_L3` is a **definite miss**. Report the
+definite-miss count directly from `partition_L4.csv`. Costs nothing — the column is already
+there.
+
+**(b) Scope the length-4 oracle only after seeing (a).** If the free lower bound is already
+high, the oracle is **optional**: its only remaining job is converting INCONCLUSIVE into
+confirmed-optimal, which is the expensive half (1,366,875 formulas x 27 pairs). A high (a) may
+make that confirmation not worth buying.

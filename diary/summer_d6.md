@@ -16,7 +16,7 @@ units, different population, different depth, different sample axis, or a sentin
 a number at all — and the comparison still returned a value, so the pipeline reported a
 verdict rather than an error.
 
-## The six instances
+## The instances
 
 | # | instance | the reference | the measured quantity | how it surfaced |
 |---|---|---|---|---|
@@ -25,6 +25,7 @@ verdict rather than an error.
 | 3 | **Expanded-count vs formula-space** | `K*(3K)^(L-1)` formula-space ratios (24.0x, 12.4x) | measured **wall-clock** ratios (83.2x, 36.6x) | the P1 "cancellation" finding, withdrawn |
 | 4 | **`nan` sentinel** | `true - x > tol` | `x` was `nan` / `None` / no-solution | 12 no-label runs scored as successes; 10 comparison sites still unguarded |
 | 5 | **Treatment-dependent median membership** | all-27 median | timed-out peaks are truncated, and membership moves with the treatment | corrected to a matched set before the L4 run (A1) |
+| 7 | **Item 3 blocked on an uncomputed effect size** | asserted "order 7 drops, enough to move a between-arm comparison" | measured ~0.21% against a 64.7% gap | computed when the block was challenged |
 | 6 | **Depth-3 reference under a depth-4 search** | `in_grammar_max` enumerated at hardcoded depth 3 | a `PART_LENGTH=4` search | `part=0.146338 > true=0.145326` in the run log |
 
 ### Detection power for instance 2, since it is the one with a number
@@ -39,15 +40,45 @@ bad pair:
 **14.5%.** The check was not weak by accident of which units were drawn; it had a one-in-seven
 chance of ever firing.
 
-## What separates these from ordinary bugs
+## HEADLINE — the defects that agreed with us were the ones nothing caught
 
-Each one **produced a number**. None raised, none returned an obviously wrong magnitude, and
-four of the six produced a number that was *favourable* to the hypothesis under test —
-instances 3, 4, 5 and 6 would all have been reported as supporting results.
+**Four of the seven produced a result *favourable* to the hypothesis under test.** Instances
+3, 4, 5 and 6 would each have been reported as supporting evidence.
 
-Three were caught only because a later, unrelated measurement disagreed with them:
-2 by running upstream's own `beam_optimal`, 3 by learning what `expanded` actually counts,
-6 by reading a run log while waiting.
+**Every one of those four was caught by an unrelated later measurement disagreeing — never by
+a check designed to catch it.** Instance 2 surfaced only by running upstream's own
+`beam_optimal`; 3 only by learning what `expanded` actually counts; 6 only by reading a run
+log while waiting for something else; 4 only when a scoring pass produced an impossible
+verdict.
+
+> **The pipeline had no mechanism for detecting a defect that agreed with us.**
+
+That is the finding. Pre-registration fixes what is predicted; it does not check that the
+comparison is well-formed. Every guard in `verify/run_all.sh` tests inputs and plumbing, and
+the one check that examines a result (check 10) was itself instance 2. Nothing anywhere
+compares a reference against the quantity it is standing in for.
+
+## Instance 7 — the class covers reasoning, not only code
+
+Item 3 was blocked on the assertion that OR-of-same-category-then-narrowing "is not
+guaranteed equally frequent across the trained and untrained arms", of "order 7 drops at 100
+units, enough to move a between-arm comparison". **No magnitude was computed, and the
+computation was available.** When done:
+
+```
+worst case, all losses on one arm : 0.0741 x 0.0284 = 0.210%
+trained/untrained gap             : (3.41-2.07)/2.07 = 64.7%
+                                    ~1 part in 308
+```
+
+The confound could not have moved the comparison, and the exposure in fact splits 3 trained /
+3 untrained. An experiment was deferred on an unquantified assertion where a derivation was
+possible.
+
+Same class as the other six: **the reference (an asserted effect size) never matched the
+measured quantity (an actual one), and nothing required it to.** The class is not about code.
+It is about comparisons made without checking that the two sides are the same kind of thing —
+and a blocking decision is a comparison.
 
 ## Not on this list
 
