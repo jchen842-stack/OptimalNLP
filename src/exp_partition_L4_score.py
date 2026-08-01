@@ -123,6 +123,7 @@ def main():
 
     addenda_scoring(part, flat)
     score_p7(part, flat)
+    score_p7_banded(part, flat)
 
     if a or b:
         print("\n  D5.0's founding frontier-explosion observation is substantially a")
@@ -274,3 +275,101 @@ def score_p7(part, flat):
     else:
         print("\n  => SPLIT: no halving, but outside the near-invariance band. Report as such;")
         print("     neither P5(b) nor P7 may be claimed whole.")
+
+# =====================================================================================
+# ADDENDA to P5/P7 — registered 2026-08-01 with results/partition_L4.csv verified absent
+# (L4 run at 40:45 elapsed, still in flight).
+# =====================================================================================
+P7_ADDENDA = """
+B1  FOUR-WAY OUTCOME, not three. The bands are disjoint and exhaustive, fixed in advance:
+
+      ratio >= 1.2          THE PARTITION ENLARGED THE FRONTIER. A distinct result in its
+                            own right, not a failure of either hypothesis: refinement
+                            reordering costs more than it saves. NEITHER P5(b) nor P7 is
+                            claimed. Reported as its own finding.
+      0.833 <= ratio < 1.2  P7 HOLDS -- near-invariant.
+      0.5   <= ratio < 0.833  SPLIT. No halving, but outside the invariance band. Neither
+                            claimed whole.
+      ratio < 0.5           P5(b) HOLDS -- halved.
+
+B2  POWER FLOOR ON THE MATCHED SET.
+    The matched-set size is reported explicitly, and EVERY per-pair ratio is printed, not
+    only the median.
+    If the matched set has FEWER THAN 10 pairs, the verdict is declared UNDERPOWERED and
+    NEITHER P7 NOR P5(b) is called. The per-pair ratios are reported and scoring stops.
+
+    Rationale, recorded in advance: per the paper's Section C, sample computation costs on
+    the order of |D|x more arithmetic per estimate, and |D| goes from 1 to ~2,000. The
+    per-sentence run may therefore time out far more often than the flat run did. If it
+    does, the matched set collapses to the pairs that were EASIEST IN BOTH RUNS -- which is
+    the same membership problem A1 already corrected P5(b) for, reappearing one level up.
+    A median over the easiest survivors is not a measurement of the wall.
+
+    Additionally: if per-sentence timeouts SUBSTANTIALLY EXCEED the flat run's 4, that is
+    reported as a result in its own right -- it is the P5(a)/P5(b) asymmetry of A2 actually
+    realised, with the per-sample arithmetic cost dominating whatever the bounds do.
+
+B3  THE SOUNDNESS FINDING IS INDEPENDENT OF THE L4 OUTCOME.
+    Recorded in advance so it is not re-litigated afterwards. Partition-invariance of the
+    aggregated estimate holds regardless of what L4 shows: 5 of 27 prefixes remain
+    inadmissible under the per-sentence partition, one pair (trained a=0.1 unit88) is worse
+    than flat, and both miss-prefix ceilings are byte-identical across partitions
+    (0.232677, 0.203398).
+    L4 decides ONE thing only: whether diary D5.0 survives. It decides nothing about
+    admissibility, nothing about the upstream report, and nothing about the 2/27 misses.
+"""
+
+
+def score_p7_banded(part, flat):
+    import statistics as _st
+    print(P7_ADDENDA)
+    matched = [r for r in part
+               if r["halted"] == "no"
+               and flat.get((r["arm"], r["alpha"], r["unit"]), {}).get("halted") == "no"]
+    part_halt = [r for r in part if r["halted"] != "no"]
+
+    print("--- B2: matched set and per-pair ratios ---")
+    print(f"  flat timeouts/caps        : {FLAT_TIMEOUTS}")
+    print(f"  per-sentence timeouts/caps: {len(part_halt)}"
+          + (f"   {[r['unit'] + '/' + r['alpha'] for r in part_halt]}" if part_halt else ""))
+    if len(part_halt) > FLAT_TIMEOUTS:
+        print(f"  >>> per-sentence timeouts EXCEED flat ({len(part_halt)} > {FLAT_TIMEOUTS}).")
+        print("      This is the P5(a)/P5(b) asymmetry realised: per-sample arithmetic cost")
+        print("      (~|D|x, |D| 1 -> ~2000) dominating whatever the bounds do. A result in")
+        print("      its own right.")
+    print(f"  MATCHED SET SIZE: {len(matched)} of 27")
+
+    if matched:
+        print(f"\n  {'pair':>28} {'flat_peak':>11} {'part_peak':>11} {'ratio':>8}")
+        ratios = []
+        for r in sorted(matched, key=lambda r: (r["arm"], r["alpha"], r["unit"])):
+            k = (r["arm"], r["alpha"], r["unit"])
+            fp = float(flat[k]["peak_frontier"]); pp = float(r["peak"])
+            ratios.append(pp / fp)
+            print(f"  {k[0] + ' a=' + k[1] + ' ' + k[2]:>28} {fp:>11,.0f} {pp:>11,.0f} "
+                  f"{pp / fp:>8.3f}x")
+        print(f"  per-pair ratio: min {min(ratios):.3f}  median {_st.median(ratios):.3f}  "
+              f"max {max(ratios):.3f}")
+
+    if len(matched) < 10:
+        print(f"\n  *** VERDICT: UNDERPOWERED. Matched set is {len(matched)} < 10.")
+        print("      NEITHER P7 NOR P5(b) is called. Per-pair ratios reported above; stop.")
+        print("      The matched set is the pairs easiest in BOTH runs, which is the A1")
+        print("      membership problem one level up.")
+        return
+
+    mp = _st.median([float(r["peak"]) for r in matched])
+    fp = _st.median([float(flat[(r["arm"], r["alpha"], r["unit"])]["peak_frontier"])
+                     for r in matched])
+    ratio = mp / fp
+    print(f"\n--- B1: four-way outcome  (matched median ratio {ratio:.3f}x) ---")
+    if ratio >= 1.2:
+        v = ("FRONTIER ENLARGED — distinct result, neither P5(b) nor P7 claimed. "
+             "Refinement reordering costs more than it saves.")
+    elif ratio >= 0.833:
+        v = "P7 HOLDS — near-invariant. The L4 wall is NOT a harness artifact; D5.0 survives."
+    elif ratio >= 0.5:
+        v = "SPLIT — no halving, but outside the invariance band. Neither claimed whole."
+    else:
+        v = "P5(b) HOLDS — halved. The wall moved; D5.0 superseded by an APPENDED entry."
+    print(f"  {v}")
