@@ -2038,3 +2038,125 @@ Framing fixed now so it cannot be written to fit that outcome.
 the targeted trace — all stand exactly as recorded. **Their cause changed; their existence did
 not.** What is retracted is only the claim that they characterise `optimal.py` rather than our
 configuration of it.
+
+---
+
+# CORRECTION — P3 recovered by POP ORDERING, not by refinement
+
+2026-08-01. Supersedes the reading offered when P3 was first reported, and supersedes
+registered mechanism A3 as the explanation.
+
+A3 proposed that recovery came from Algorithm 1's refine-on-pop step (lines 14-21) becoming
+non-trivial once |D| went from 1 to ~2,000. **That is not what happened.**
+
+The evidence is the exposure audit under the per-sentence partition:
+
+- Both miss-carrying prefixes **still have an inadmissible ceiling**, at **byte-identical
+  values** — `0.232677` (trained a=0.2 unit88) and `0.203398` (trained a=0.05 unit86).
+- Both are **still dropped** by `reduce_frontier`.
+- 5 prefixes are dropped in total, and **0 optima are lost**.
+
+Refinement did not rescue P. P was never rescued: **the bound is unchanged and the drop still
+happens.** What changed is *when* the drop happens relative to the expansion. The winning
+formula is generated because P is **popped and expanded before** a later, stale copy of it is
+pruned. The optimum is produced by an expansion that had already occurred; the subsequent drop
+removes a frontier entry that no longer matters.
+
+**The recovery is a pop-ordering effect, not a soundness improvement.**
+
+The consequence has to be stated plainly, because it is the part that matters:
+
+> **The misses can recur under any perturbation of pop order.** Nothing about the
+> per-sentence partition makes the search sound. Heap tie-breaking, a different concept
+> ordering, a different `min_support`, a changed `K`, a different corpus, or an unrelated
+> upstream change to insertion order can all reorder pops and reinstate the loss. The 0/27
+> result is a property of one particular execution order, not a guarantee.
+
+This also explains why the flat run's four "escaped by luck" pairs escaped: the same
+mechanism, succeeding. "Luck" was the right word and it is now named.
+
+---
+
+# STANDALONE RESULT — the aggregated estimate is PARTITION-INVARIANT
+
+Recorded separately because it is what makes the byte-identical ceilings meaningful, and
+because it rules out an entire class of fix.
+
+**Derivation.** The aggregated form is built from three ingredients:
+
+- `SUM_x |I^C_max(L)_x|` — a count over all `(x, j)` pairs. Regrouping elements into samples
+  changes which `x` an element is filed under; it does not change the set of elements, so the
+  sum is unchanged.
+- `Top^A_t(Q)` — concepts sorted by their **dataset-wide** total of `Q`, cumulative over the
+  top `t`. Concept-wise over totals; the sample axis never enters.
+- `Bott^A_1(Q)` — the **minimum dataset-wide total** over concepts. Same.
+
+None of the three depends on how elements are partitioned into samples. Therefore **the
+aggregated estimate, and every ceiling derived from it, is invariant under repartition.**
+
+**Empirical confirmation, which is why this is a result and not an argument:** across the flat
+one-sample and per-sentence partitions, both miss-prefix ceilings are identical to the last
+bit — `0.232677` and `0.203398`. Two different sample axes, same number.
+
+**What this rules out.** Repartitioning is **not a fix** for this class of error. Under the
+per-sentence partition:
+
+```
+inadmissible ceilings   6/27 -> 5/27       (a fall of one pair)
+set composition          CHURNED: trained a=0.1 unit88 went -0.020312 -> +0.015224,
+                         i.e. ADMISSIBLE under the flat axis and INADMISSIBLE under the
+                         "correct" one
+```
+
+The correct partition does not repair the bound. On one pair it makes it worse. Anyone
+reaching for "just partition the data properly" as the remedy is reaching for something this
+measurement excludes.
+
+Note the asymmetry that makes this coherent: `Bott_1(E^C)_x` — the *per-sample* quantity whose
+vanishing E.2.2 requires — **is** partition-dependent (0% of samples comply flat, 62-93%
+per-sentence). The *aggregated estimate built on top of it* is not. So repartitioning fixes
+the compliance statistic without fixing the bound it is supposed to license.
+
+---
+
+# UPSTREAM REPORT — SUPERSEDED. The earlier draft was too generous.
+
+Supersedes the draft above, which framed this as a caller error with an unguarded
+precondition. That framing was wrong in the caller's favour and is withdrawn.
+
+**1. The aggregated estimate is inadmissible whenever `Bott_1(E^C)_x != 0` for ANY `x`.**
+E.2.2's condition is **universal**, not typical. It is not "rarely violated"; it is "must hold
+everywhere, and here it holds nowhere".
+
+**2. Correct partitioning does NOT repair it.** The aggregated estimate is partition-invariant
+(derivation and byte-identical ceilings above). Under the paper's own sample definition —
+one sentence per sample — **5 of 27 prefixes remain inadmissible, and one pair is worse than
+under the degenerate flat axis.**
+
+**3. `reduce_frontier` acts on the unrefined aggregated estimate, pre-refinement**
+(Algorithm 1 lines 11, 52). So whether the optimum survives depends on **pop ordering** —
+whether a node is expanded before a stale copy is pruned. Under the per-sentence partition
+that ordering happens to be favourable on all 27; under the flat axis it was not on 2. **The
+search's optimality is order-dependent, not bound-guaranteed.**
+
+**4. What `reshape(1, M)` did, precisely.** It made the violation **universal** — 0% of
+samples compliant against 62-93% per-sentence. **It amplified exposure. It is not the cause.**
+The cause is that an inadmissible estimate is used as a pruning bound.
+
+**Two remedies, offered in order of strength:**
+
+- **(a) Do not prune on an unrefined aggregated estimate.** Refine before `reduce_frontier`
+  acts, or restrict pruning to refined nodes. This addresses the defect rather than its
+  detection, and removes the order-dependence.
+- **(b) Assert or warn** at `get_optimal_heuristic_info` when `Bott_1(E^C)_x != 0` on any
+  sample, naming E.2.2. Cheap — already a by-product of the quantity helpers — but it only
+  reports the violation; it does not make the search sound, and per point 2 a compliant
+  partition is not sufficient either.
+
+**Reproduction to supply:** `tests/test_bruteforce_oracle_all27.py` (2/27, exact values),
+`src/exp_partition.py` (0/27 per-sentence, with the pop-ordering caveat), the `Bott_1`
+measurement (859, 1/1 samples flat; 62-93% compliance per-sentence), and the byte-identical
+ceilings across partitions.
+
+**Every miss measurement is kept, unchanged.** Their cause is now correctly attributed; their
+existence was never in question.
