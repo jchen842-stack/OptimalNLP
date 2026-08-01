@@ -2569,3 +2569,132 @@ Added to the report. It requires no patch and no access to internals:
 
 This is offered alongside the two remedies, not instead of them. It tells a user which of
 their results are at risk; it does not make the search sound.
+
+---
+
+# STRUCTURAL DERIVATION of n_prefixes, and why the grammar's danger does not scale
+
+The empirical table above is a consequence, not the result. The result is structural.
+
+**`n_prefixes` = the number of leaves that could have been added LAST.** In the left-deep
+grammar every formula is `((a op1 b) op2 c)`, and a distinct prefix exists for each leaf that
+could occupy the final position without changing the mask. That requires the operator applied
+to it to be **interchangeable with the trailing operator** — i.e. **identical adjacent
+operators**.
+
+```
+OR + OR         a | b | c        all three leaves may be last          -> 3
+ANDNOT + ANDNOT a & ~b & ~c      only the NEGATED leaves may be last   -> 2
+mixed           (a op1 b) op2 c  only c may be last                    -> 1
+```
+
+**AND-NOT gives run-length rather than run-length + 1 because the positive base cannot move.**
+The grammar never negates the leftmost term (`expand_node` builds `And(label, Not(leaf))`, so
+the base of the chain is always positive), so `a` is pinned in `a & ~b & ~c` while `b` and `c`
+commute freely. An OR-run of length `r` yields `r + 1` prefixes; an AND-NOT run of length `r`
+yields `r`.
+
+## The vulnerable share of SIGNATURE SPACE is 2/3 at both lengths
+
+A signature is protected iff its **trailing operator run has length >= 2** — that is, the last
+two operators are identical.
+
+```
+length 3   3^2 = 9 signatures    protected (op1 == op2)      3      vulnerable  6/9  = 0.667
+length 4   3^3 = 27 signatures   protected (op2 == op3)      9      vulnerable 18/27 = 0.667
+```
+
+**Constant at 2/3. The grammar's danger does not scale with length.** Adding a level multiplies
+both the signature space and the protected subspace by 3, so the ratio is fixed. Whatever
+changes with length, it is not the share of the *space* that is vulnerable — it can only be the
+share of *realised optima* that land in it.
+
+## Observed optima are biased toward protected signatures
+
+```
+signature space, vulnerable share       : 67%
+observed length-3 optima, mixed share   : 9 mixed of 19 two-operator optima = 47%
+```
+
+Real optima land in protected signatures **more often than chance** — 47% vulnerable against
+67% of the space. Repeated-operator formulas (`a OR b OR c`, `a AND NOT b AND NOT c`) are
+apparently what these neurons actually select for, and that repetition is exactly what buys the
+redundancy. The protection is incidental, not designed.
+
+---
+
+# P9 RESTATED against the fixed baseline — registered before partition_L4.csv exists
+
+Since the signature-space share is constant at 67%, the only thing length can change is where
+optima land within it. P9 is therefore restated on **the mixed share of length-4 OPTIMA**,
+computable from the length-4 optima alone with no extra instrumentation.
+
+```
+P9   mixed (single-prefix) share of length-4 optima:
+
+     ~47%   -> vulnerability is LENGTH-INVARIANT. The length-3 reading transfers.
+     -> 67% -> the bug CONCENTRATES with length: optima stop being biased toward protected
+               signatures, and every length-4 result in this repo is MORE exposed than the
+               length-3 ones.
+     < 47%  -> longer formulas BUY REDUNDANCY: more room for repeated-operator runs.
+```
+
+The baseline is fixed at **47%** (9 of 19) and **67%** (space), both computed from length-3
+data already committed, before any length-4 optimum exists.
+
+Comparison preconditions: *Quantities* — a share of optima on both sides, dimensionless.
+*Membership* — the same 27 pairs; two-operator optima only at L3, three-operator at L4, and the
+denominator is stated with each figure. *Reference* — the 47%/67% pair above, from committed
+L3 data. *Discrimination* — the three bands give opposite conclusions about length-4 exposure.
+*Power* — full census, no sampling. *Sentinels* — pairs whose L4 optimum is unavailable
+(timeout, or the C2 one-sided limitation) are bucketed and excluded from the denominator, and
+the excluded count is reported.
+
+---
+
+# QUEUE — item 4 (event-ordering metric) promoted to FIRST after L4
+
+Ahead of D/E/F and the fork-only rerun. **Rationale, recorded so this does not read as
+cleanup:**
+
+Three exposure measures now exist, at three levels of the search:
+
+```
+set-based inadmissible ceilings   14/27      (level 2, any optimal prefix)
+all-optimal-prefixes-pruned bound  4/27      (level 2, all prefixes)
+optimal leaf ancestors pruned     31 / 24-of-27 pairs   (level 1)
+```
+
+**All three count OPPORTUNITIES, and all three have proven nearly uncorrelated with outcome**
+— against 2 actual losses flat and 0 per-sentence. 24 of 27 pairs had an optimal leaf ancestor
+pruned and lost nothing. The bound says 4 where the truth is 2 and 0.
+
+**Item 4 is the only harm measurement in the section.** Everything else bounds. Until the
+event-ordering metric exists — was the prefix expanded before any copy of it was dropped —
+there is no measured quantity for "the prune actually cost us the optimum", only upper bounds
+that overstate by 2x to 12x. That is not a tidying task; it is the section's missing dependent
+variable.
+
+---
+
+# UPSTREAM DIAGNOSTIC — strengthened to inspection-only
+
+Replaces the earlier "count the prefixes" wording, which implied enumeration.
+
+> **`n_prefixes` is a function of the operator signature alone.** It is readable off a
+> published formula **by inspection** — no enumeration, no instrumentation, no access to the
+> search internals.
+>
+> **If the formula's two operators differ, there is exactly one construction path to it, and
+> no redundancy against an unsound prune.** Identical adjacent operators commute and give 2-3
+> alternative paths; an OR-run of length `r` gives `r+1`, an AND-NOT run gives `r` (the
+> positive base is pinned).
+>
+> **Support:** 2 of 9 single-prefix units lost their optimum (22%); **0 of 18** units with a
+> redundant prefix did.
+>
+> The vulnerable share of signature space is **2/3 at every length**, so this does not become
+> less relevant for longer formulas.
+
+Offered alongside the two remedies, not instead of them: it tells a user which of their
+published results are at risk, using only what is already printed in their results table.
