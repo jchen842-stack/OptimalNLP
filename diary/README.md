@@ -47,3 +47,4 @@ once the `.md` is edited.
    immediately above the claim it corrects, never below — and update that entry's status here.
 4. Do not rename or move existing entries; their paths are cited in the top-level `README.md`
    and in external write-ups.
+- [D6 — the measurement-defect class](summer_d6.md) — six instances where the reference stopped matching the measured quantity; record only, entry not written

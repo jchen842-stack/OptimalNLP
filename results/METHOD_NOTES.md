@@ -2160,3 +2160,46 @@ ceilings across partitions.
 
 **Every miss measurement is kept, unchanged.** Their cause is now correctly attributed; their
 existence was never in question.
+
+---
+
+# CORRECTION to C2 — the length-4 reference is a one-sided check, not void
+
+`max_length` is a **maximum**, not an exact length. Source: `optimal.py:566` marks a node
+`INDIVIDUAL` only when `len(candidate_formula) == max_length`; `:575` computes
+`available_spots = max_length - len(candidate_formula)`; shorter formulas are scored via the
+ancestor-propagation block at `:816-847`. Empirically, **1 of 27 length-3 runs returned a
+formula with fewer than 3 leaves**, in both the flat and per-sentence runs.
+
+So the length-4 in-grammar space **contains** the length-3 space, and comparing a length-4
+result against the length-3 optimum is sound in one direction:
+
+```
+part_L4 <  true_L3   ->  DEFINITE MISS, no length-4 oracle needed
+part_L4 >= true_L3   ->  INCONCLUSIVE, cannot confirm length-4 optimality
+```
+
+`in_grammar_max` and `missed` in `partition_L4.csv` are therefore **kept, relabelled as a
+one-sided lower-bound check**: it detects losses and cannot confirm optimality. `missed == 1`
+is a real miss; `missed == 0` means "not caught", not "optimal". My earlier call to void the
+columns was wrong and threw away a working loss detector.
+
+A length-4 miss **count** still needs the genuine 1,366,875-formula oracle.
+
+---
+
+# UPSTREAM REMEDY (a) — its cost, stated with it
+
+Amends the superseded-framing section above, where remedy (a) was given without its price.
+
+**(a) Do not prune on an unrefined aggregated estimate** — refine before `reduce_frontier`
+acts, or restrict pruning to refined nodes. **This is not free, and the cost is the reason the
+aggregated path exists.** Per the paper's Section C, sample-based computation costs on the
+order of **|D|x** more arithmetic per estimate than the aggregated form. Refining before
+pruning pays that on **every node**, not only on popped ones — which is precisely the expense
+the aggregated estimate was introduced to avoid. At |D| ~ 2,000 that is a large constant.
+
+**The remedy converts a soundness defect into a runtime cost.** That is a real trade and it
+should be presented to upstream as one, not as a free correctness fix. Remedy (b), the
+assertion, is cheap but only reports the violation; and per the partition-invariance result, a
+compliant partition is not sufficient either.

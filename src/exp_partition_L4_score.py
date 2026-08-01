@@ -393,8 +393,28 @@ C1  STOP RULE FOR THE RUN, fixed before it becomes a judgement call.
     the median would be over pairs that are fast in the flat run, fast in the per-sentence
     run, AND early enough to have finished. No median over that set means anything.
 
-C2  KNOWN DEFECT IN partition_L4.csv's `in_grammar_max` COLUMN — found in flight, recorded
-    before the file exists.
+C2  REVISED (2026-08-01, before the file exists). NOT void -- a ONE-SIDED LOWER-BOUND CHECK.
+
+    `max_length` is a MAXIMUM, not an exact length. Verified in source: `optimal.py:566`
+    marks a node INDIVIDUAL only when `len(candidate_formula) == max_length`, `:575` computes
+    `available_spots = max_length - len(candidate_formula)`, and shorter formulas are scored
+    through the ancestor-propagation block (`:816-847`). Verified empirically: 1 of 27
+    length-3 runs returned a formula with fewer than 3 leaves, in BOTH the flat and the
+    per-sentence runs.
+
+    Therefore the length-4 in-grammar space CONTAINS the length-3 space, and:
+
+        part_L4 <  true_L3   =>  DEFINITE MISS. No length-4 oracle needed.
+        part_L4 >= true_L3   =>  INCONCLUSIVE. Cannot confirm length-4 optimality.
+
+    So `in_grammar_max` / `missed` in partition_L4.csv are KEPT and relabelled: they are a
+    one-sided check that DETECTS LOSSES and CANNOT CONFIRM OPTIMALITY. `missed == 1` is a
+    real length-4 miss; `missed == 0` means "not caught", not "optimal".
+
+    A full length-4 miss COUNT still needs a genuine length-4 brute force
+    (K*(3K)^3 = 1,366,875 formulas x 27 pairs) and is not claimed from this file.
+
+    ORIGINAL C2 TEXT, superseded, kept so the correction is visible:
     `exp_partition.py:130` enumerates the brute-force optimum at a HARDCODED DEPTH OF 3
     (`for i ... for m2 in mv(...) ... for m3 in mv(m2)`), regardless of `PART_LENGTH`. So in
     partition_L4.csv the `in_grammar_max` and `missed` columns hold the LENGTH-3 optimum,
