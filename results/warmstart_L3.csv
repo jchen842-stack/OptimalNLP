@@ -1,0 +1,28 @@
+arm,alpha,unit,in_grammar_max,seed_iou,warm_iou,warm_missed,warm_formula,warm_time_s,warm_halted
+trained,0.2,unit88,0.25454105110196174,0.2545,nan,0,,0.48,no
+trained,0.2,unit92,0.25783132530120484,0.2578,0.25783132530120484,0,((const=PP AND (NOT tag=DT)) OR lemma=.),0.71,no
+trained,0.2,unit413,0.4689449801474759,0.4689,0.4689449801474759,0,((const=NP AND (NOT const=VP)) AND (NOT const=PP)),0.11,no
+trained,0.1,unit88,0.18162962962962964,0.1816,0.18162962962962964,0,((const=NP AND (NOT const=PP)) AND (NOT tag=DT)),0.53,no
+trained,0.1,unit92,0.15932811480756687,0.1593,0.15932811480756687,0,(dep=pobj OR lemma=.),1.1,no
+trained,0.1,unit396,0.1453263274336283,0.1453,0.1453263274336283,0,((const=PP AND (NOT tag=IN)) AND (NOT lemma=a)),1.0,no
+trained,0.1,unit413,0.09521720052654672,0.0952,0.09521720052654672,0,((tag=NN AND (NOT const=VP)) AND (NOT const=PP)),0.39,no
+trained,0.1,unit510,0.15745756590827015,0.1575,nan,0,,1.97,no
+trained,0.05,unit86,0.21660649819494585,0.2166,nan,0,,0.29,no
+trained,0.05,unit87,0.07207207207207207,0.0721,nan,0,,5.71,no
+trained,0.05,unit91,0.10947749377968785,0.1095,nan,0,,0.82,no
+trained,0.05,unit395,0.0954036891442395,0.0954,0.0954036891442395,0,((const=NP AND (NOT const=VP)) AND (NOT tag=DT)),0.88,no
+trained,0.05,unit412,0.0980507974010632,0.0981,nan,0,,0.81,no
+untrained,0.2,unit88,0.23879198125488155,0.2388,nan,0,,1.24,no
+untrained,0.2,unit92,0.280018192844148,0.28,0.280018192844148,0,((lemma=a AND (NOT const=VP)) OR dep=punct),0.43,no
+untrained,0.2,unit396,0.25183038438072,0.2518,0.25183038438072,0,((lemma=a AND (NOT const=PP)) OR lemma=.),1.62,no
+untrained,0.2,unit510,0.2713324094238765,0.2713,0.2713324094238765,0,((tag=NN OR dep=nsubj) OR lemma=.),0.51,no
+untrained,0.1,unit88,0.13526933493830876,0.1353,nan,0,,2.0,no
+untrained,0.1,unit92,0.1947306198277318,0.1947,0.1947306198277318,0,((tag=NN AND (NOT const=VP)) OR dep=punct),0.44,no
+untrained,0.1,unit396,0.14863013698630137,0.1486,0.14863013698630137,0,((tag=NN AND (NOT const=VP)) OR lemma=.),0.82,no
+untrained,0.1,unit413,0.1444379161770466,0.1444,0.1444379161770466,0,((const=VP AND (NOT tag=NN)) AND (NOT lemma=a)),1.41,no
+untrained,0.1,unit510,0.15440487347703843,0.1544,0.15440487347703843,0,((dep=pobj AND (NOT const=VP)) OR lemma=.),0.95,no
+untrained,0.05,unit88,0.09189655172413794,0.0919,nan,0,,0.97,no
+untrained,0.05,unit92,0.11670203091846014,0.1167,0.11670203091846014,0,((const=NP AND (NOT const=VP)) AND tag=NN),0.91,no
+untrained,0.05,unit396,0.07546454304133485,0.0755,nan,0,,2.96,no
+untrained,0.05,unit413,0.10377358490566038,0.1038,nan,0,,1.2,no
+untrained,0.05,unit510,0.07335772782714758,0.0734,nan,0,,2.46,no

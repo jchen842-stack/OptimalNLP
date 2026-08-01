@@ -1550,3 +1550,104 @@ was an artifact of dividing a time by a count.
 
 Note the three L5 timeouts/censored rows: the L5/L4 count ratio uses only the 3 units that
 terminated, and their `expanded` for the two timed-out units is -1 (censored), not zero.
+
+---
+
+# EXPOSURE AUDIT — retires "2 of 27" as a rate
+
+2026-08-01. All 27 pairs, K=15, length 3, M=24,199, published build, no new search beyond
+one instrumented pass. For each pair, P* is the length-2 prefix of the true in-grammar
+optimum, taken from the existing 30,375 enumeration. The **window** is
+`[assigned ceiling, true_max(P*)]`: non-empty exactly when the ceiling is inadmissible.
+
+```
+pair                        ceiling   true_max(P*)   window     max threshold  pos in window
+trained   a=0.2  unit88    0.232677     0.254541    +0.021864     0.252202       89.3%   MISS
+trained   a=0.05 unit86    0.203398     0.216606    +0.013209     0.206797       25.7%   MISS
+trained   a=0.1  unit396   0.126125     0.145326    +0.019201     0.145326      100.0%   escaped
+untrained a=0.1  unit88    0.121492     0.135269    +0.013777     0.135269      100.0%   escaped
+untrained a=0.1  unit413   0.128911     0.144438    +0.015527     0.144438      100.0%   escaped
+untrained a=0.05 unit413   0.086004     0.103774    +0.017769     0.103774      100.0%   escaped
+                         ... 20 pairs with a NEGATIVE window (admissible ceiling) ...
+trained   a=0.1  unit92    P* never entered the frontier
+```
+
+**The real numbers:**
+
+- **Ceiling inadmissible on 6 of 27** (window > 0). This is the exposure.
+- **P* was dropped by `reduce_frontier` on all 6 of those.** The threshold entered the window
+  every time it could.
+- **The optimum was actually lost on 2 of the 6. Four escaped by luck** — the search reached
+  `true_max(P*)` by a *different* prefix, so dropping P* cost nothing. Their `pos in window`
+  is exactly 100.0%, which is what that means: final answer == true_max(P*).
+- Ceiling admissible on 20 of 27; P* never reached the frontier on 1.
+
+**"2 of 27" is retired.** It was never a rate — it counted the pairs where an
+inadmissible ceiling happened to be *unrecoverable*, not where it occurred. The occurrence
+rate is **6 of 27**, and the 4 escapes are luck about alternative prefixes, not evidence of
+correctness. A corpus where the optimum has a unique prefix would convert those escapes into
+misses.
+
+## Aggregated, not refined, at the moment of the drop
+
+The node's 5th tuple element is the heuristic that produced its current estimate. At the
+`reduce_frontier` call that dropped it, P* carried the **aggregated (`"sum"`) estimate on
+both miss pairs** — it had not been popped and refined to the sample-based estimate. Across
+all 27 the only pair where P* ever carried `"sample"` is untrained a=0.2 unit88, whose window
+is negative anyway.
+
+So the estimate that was wrong is the **aggregated** one, and it was wrong *before* the node
+was ever popped for refinement.
+
+## BLOCKED: the bug-vs-paper discriminator cannot be run here
+
+Deciding whether this is an implementation bug or an inadmissible published estimator needs
+the paper's closed form for the aggregated AND-path estimate, hand-computed from the masks
+and compared against the assigned ceiling `0.23267674991206472`.
+
+**The paper text is not in this repo or the pinned upstream.** `.upstream-clean/PAPER.md` is
+a 314-line *reproduction-instructions* document — Docker setup, dataset download, run
+commands. It contains no equations, no Algorithm 1, and no Section 4.3.
+
+Reconstructing the equations from `optimal_sample_heuristic.py` would be circular: it would
+compare the code against itself and could only ever return "match". **No verdict is recorded**
+until the paper's equations are supplied.
+
+---
+
+# WARM START — prediction NOT SUPPORTED, and the test cannot discriminate at length 3
+
+`src/exp_warmstart.py`, raw output `results/warmstart_L3.csv`. Registered before running:
+**W1** miss count > 2, on the argument that `reduce_frontier` drops on
+`ceiling < threshold`, so a higher starting threshold can only enlarge the wrongly-dropped
+set. **W2** no pair improves.
+
+```
+cold miss set (2): trained a=0.2 unit88, trained a=0.05 unit86
+warm miss set (0): --
+W1: NOT SUPPORTED   0 vs 2
+W2: NOT SUPPORTED   both cold misses "repaired"
+```
+
+**Both verdicts are real but the experiment is degenerate, and that is the finding.**
+`beam_optimal-200` is 27/27 true-optimal at length 3, so seeding the incumbent with it seeds
+**the optimum itself**. A search that starts holding the optimum cannot finish below it,
+no matter how much it wrongly drops. The mechanism W1 described is real and still operates —
+it just cannot show up in the outcome.
+
+Direct evidence that it operates: **on 12 of 27 pairs the warm-started search returned no
+label at all.** It dropped every candidate and contributed nothing; the seed carried the
+result. That is the predicted enlargement of the dropped set, visible in the search's own
+output rather than in its IoU.
+
+**Scoring correction made before reporting.** Those 12 no-label runs come back as
+`best_iou = nan`, and the first scoring pass counted `nan` as "not a miss" because
+`true - nan > tol` is False — silently scoring 12 no-solution runs as successes. Corrected by
+treating a `None` return as "the search found nothing better than the seed", i.e. effective
+answer = seed. Same verdicts either way here, but the first pass was wrong for the same
+reason 2a's ratio-of-averages was wrong: **a sentinel that is not a number must be handled
+before it reaches a comparison, not after.** Third instance of that shape in this file.
+
+**This does not test the paper's Section 4.3 mitigation.** A discriminating version needs a
+setting where beam is *not* already optimal — length 4, where beam-vs-exact actually
+disagrees. Not run.
