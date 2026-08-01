@@ -39,3 +39,4 @@ N4  CONTROL — THE SEARCH ACTUALLY DID MORE WORK.
 [no-prune] 24199 tokens | K=15 length=3 | 27 pairs
 
 in-grammar optima (brute force) ...
+  trained a=0.2 unit88: true=0.254541 pub=0.252202 nopr=nan ok  visited 398->-1  t 0.5->1574.9s time
