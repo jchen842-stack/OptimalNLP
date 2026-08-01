@@ -1363,3 +1363,41 @@ re-verified" claim covers a set that this tooling can only confirm for 39 of 99,
 itself one more than the 98 the header claims.
 
 Citations were deliberately not hand-fixed in this pass.
+
+---
+
+# EXPOSURE, restated at the K that was actually run
+
+2026-08-01. Supersedes the presentation of the exposure table above; the K=50 figures are
+unchanged and retained. **Status is still UNRESOLVED** pending the fork-only rerun at
+`utils/optimal_utils.py:271`.
+
+The earlier table led with K=50, which is not the configuration any of the miss results come
+from. Both K are now given, each labelled with the run it describes.
+
+| | **K = 15** | **K = 50** |
+|---|---|---|
+| **which run** | the 27-pair length-3 grid — 2b, oracle 10b, the falsification test, and C | the length-3 tractability grid only (*Length-3 tractability across K*) |
+| **produced any miss result?** | **yes — all of them** | no |
+| in-grammar length-3 space | 30,375 | 1,125,000 |
+| same-category leaf pairs | 22, of which disjoint **19** | 242, of which disjoint **228** |
+| all disjoint leaf pairs | 54 of 105 | 871 of 1,225 |
+| at-risk: same-category **and** disjoint | 1,140 (**3.75%**) | 45,600 (4.05%) |
+| at-risk: all disjoint pairs | 3,240 (**10.67%**) | 174,200 (15.48%) |
+
+**The figures that belong next to "2 of 27" are the K=15 ones: 3.75% and 10.67%.** The
+at-risk shape is `(A OR B)` then `AND C` / `AND NOT C` with A, B disjoint — the shape both
+observed misses have. `are_disjoint` keys off the computed `disjoint_info` matrix, not
+category identity, so 10.67% is the row that matches what the code tests; 3.75% is the
+narrower same-category reading.
+
+Same-category values are **not** all mutually exclusive: 3 of 22 same-category pairs at K=15
+overlap and 14 of 242 at K=50, all of them `const` (constituency labels nest — `const=NP` and
+`const=VP` share 8,037 tokens, `const=NP` and `const=PP` share 8,137). `lemma`, `tag`, `dep`
+and `ent` are single-valued and do partition.
+
+**What these bound.** They bound the count of length-3 candidate formulas carrying the
+at-risk shape. They are **not** a failure rate — 2/27 counts pairs, these count formulas —
+and they do **not** bound the failure surface, because the cause is unidentified and may not
+be the disjoint path at all. Nothing here should be quoted as "the bug affects X% of the
+search" until the fork-only rerun has replaced F2/F4.

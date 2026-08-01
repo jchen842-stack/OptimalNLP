@@ -2,11 +2,36 @@
 
 Written to be defensible in a meeting. Every claim has a `file:line` you can point at.
 
-> **Written 2026-07-31. All 98 `file:line` citations re-verified against commit `f1bace0`.**
-> Line numbers drift as the code changes; re-run
-> `python - <<'EOF'` … (or simply re-check the citations) after any edit to `src/`, so drift
-> is visible rather than silent. Upstream citations (`compositional/`, `utils/`, `models.py`)
-> are pinned at `70805299` and do not drift.
+> **Written 2026-07-31. Deleted in `733ff0c`, restored 2026-08-01.**
+>
+> **Citation status, measured 2026-08-01 by `verify/check_walkthrough_citations.py`
+> (output: `results/walkthrough_citations.txt`):**
+>
+> | | |
+> |---|---|
+> | **39 of 99** | verified at the cited line — the range still holds the identifier the prose names |
+> | **35 of 99** | resolve, but the content has **moved** to a different line (new line reported by the checker) |
+> | **25 of 99** | **unverifiable by any tooling** — no identifier is extractable from the surrounding prose |
+> | 0 | missing files |
+>
+> **Do not read this document as "every claim has a `file:line` you can point at" without
+> that table.** Fewer than half the citations are confirmed to point where they say. The
+> 25 unverifiable ones are a permanent blind spot in the checker, not a backlog: they can
+> only be settled by a human reading each one.
+>
+> **Two corrections to the original header, which read "All 98 `file:line` citations
+> re-verified against commit `f1bace0`":**
+>
+> 1. **The count was 98; there are 99.** The self-count was wrong.
+> 2. **"Upstream citations are pinned at `70805299` and do not drift" is misleading as
+>    written.** Upstream citations resolve against the **patched** tree, not the pinned one —
+>    `patches/0001-frontier-beam-fallback.patch` inserts ~21 lines into `optimal.py`, so the
+>    same symbol sits at different line numbers in the two trees (`expand_node` is at
+>    `optimal.py:537` patched, `:516` pinned). They are stable *given the patch*, which is a
+>    weaker claim than "pinned and do not drift".
+>
+> Citations below have **not** been hand-fixed. Drift is reported, not silently repaired, so
+> re-run the checker after any edit to `src/`.
 
 **Path convention.** Two trees are involved:
 

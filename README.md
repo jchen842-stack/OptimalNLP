@@ -79,9 +79,27 @@ implementation.
 That oracle also surfaced a property of the upstream method: `expand_node` only ever appends
 a bare literal, and negation only ever appears as AND-NOT, so `OR NOT` and compound right
 children are unreachable. At length 3 this costs nothing measurable; at length 4 it costs
-+0.16% IoU on one of the units tested. No reported number changes — the search is optimal in
-its own space — but "exact search" means *optimal within the method's formula grammar*. See
-`VERIFICATION.md` check 10 and `results/METHOD_NOTES.md`.
++0.16% IoU on one of the units tested. No reported number changes, but "exact search" means
+*optimal within the method's formula grammar*. See `VERIFICATION.md` check 10 and
+`results/METHOD_NOTES.md`.
+
+> **CORRECTION, 2026-08-01 — "the search is optimal in its own space" is FALSE.**
+> That clause stood here until 2026-08-01 and has been struck. Exhaustively enumerating all
+> 30,375 in-grammar formulas (K=15, length 3, M=24,199, min_support 5) over all 27 pairs,
+> upstream's exact search **misses its own in-grammar optimum on 2 of 27**: trained a=0.2
+> unit88 (+0.9274%) and trained a=0.05 unit86 (+4.7434%). Found by running upstream's own
+> `beam_optimal.py`, which returns a *higher* IoU than "exact" on both.
+> **The cause is not yet identified.** A first attribution (the disjoint branch of
+> `estimate_label_quantities`) was published and then falsified the same day — see the
+> RETRACTION section of `results/METHOD_NOTES.md`. Check 10 passed on 3 cases, all of which
+> happen to be among the 25 that tie; it is now `10a` + `10b`, the latter covering all 27.
+> Length-4 exact numbers have never been oracle-checked and should be read as **unverified**.
+
+> **`CODE_WALKTHROUGH.md` citation status.** Restored 2026-08-01 after deletion in `733ff0c`.
+> Of its **99** `file:line` citations (its own header said 98): **39 verified at the cited
+> line, 35 resolve with content moved, 25 unverifiable by any tooling** (no extractable
+> anchor — a permanent blind spot, settleable only by a human). Re-measure with
+> `python verify/check_walkthrough_citations.py`; output in `results/walkthrough_citations.txt`.
 
 **Not verified:** the beam path (`MAX_FRONTIER_SIZE = 200`) has no independent reference and
 is checked only at the `None` setting; the expressiveness gap above is measured on three
