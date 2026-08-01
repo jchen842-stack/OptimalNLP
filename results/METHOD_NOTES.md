@@ -1401,3 +1401,152 @@ at-risk shape. They are **not** a failure rate — 2/27 counts pairs, these coun
 and they do **not** bound the failure surface, because the cause is unidentified and may not
 be the disjoint path at all. Nothing here should be quoted as "the bug affects X% of the
 search" until the fork-only rerun has replaced F2/F4.
+
+---
+
+# EXPERIMENT C — UNBUILDABLE AS SPECIFIED, closed
+
+2026-08-01. `src/exp_noprune.py`, adjudication rule `src/exp_noprune_adjudicate.py`.
+No results CSV exists: the K=15 run was killed as void before it wrote one.
+
+The goal was a provably-no-prune `optimal.py` — `reduce_frontier` a no-op, `minimum_threshold`
+pinned at 0, and the `if node_path_max_iou > 0` gate in `estimate_iou_frontier` always taken —
+to ask whether the 2/27 misses survive with pruning off.
+
+**It cannot be built that way. The `>0` gate is also the length bound.** With it disabled the
+search leaves the length-3 space entirely:
+
+```
+K=5, max_length=3, child-formula length distribution
+  published :  {2: 40, 3: 155}
+  no-prune  :  {2: 40, 3: 260, 4: 1170, 5: 2642}
+```
+
+"Disable every prune" and "stay in the length-3 space" are not jointly satisfiable by this
+route. C is closed as unbuildable-as-specified rather than run again.
+
+## The bisect — this is the evidence, kept
+
+At K=4, `max_length=3`, cumulative and then individually:
+
+```
+subs[0..0]  reduce_frontier no-op                lengths {2,3}          clean
+subs[0..1]  minimum_threshold pinned             lengths {2,3}          clean
+subs[0..2]  the >0 gate disabled                 upstream ValueError raised
+subs[0..3]  + that ValueError disabled           lengths {2,3,4}        BREAKS THE BOUND
+subs[0..7]  + the remaining four                 lengths {2,3,4}  (len-4 count 25 -> 234)
+
+alone: only subs[2] (>0 gate) misbehaves; every other substitution is clean on its own.
+```
+
+**I disabled an assertion because it fired, and the assertion was right.** `optimal.py:400-403`
+raises `ValueError` precisely when `node_path_max_iou < minimum_threshold`. Substitution 3
+violated that invariant, upstream said so immediately, and my substitution 3b silenced the
+check as bookkeeping without testing whether it was load-bearing. It was. The failure was
+mine, not a subtlety of the method, and the lesson is the plain one: **an assertion that fires
+is a result.**
+
+It also explains C's runtime, which was heading past two hours: it was slow *because* it was
+contaminated, enumerating lengths 4 and 5.
+
+## The node-count ceiling test, resolved and then made moot
+
+`expanded` **is the `expand_node` call count** — established behaviourally, not by reading the
+counter. At K=3/4/5 the reported `expanded` matched an independent count of wrapped
+`expand_node` calls exactly: 123, 1,098, 12,351. So of the two candidate ceilings at K=15,
+the expand-call one (`K + K*3K = 690`) was the right *kind*, not the generated-node one
+(31,065). K=2 could not be used: upstream's `np.partition(quantity_vector, -length)`
+(`optimal.py:186`) requires K >= length.
+
+It is moot because **both ceilings are blown regardless** — at K=5 the no-prune build made
+12,351 expand calls against a call ceiling of 80, and emitted 4,112 distinct formulas against
+a 1,205-node grammar. A node is expanded many times over, so no single-sided count ceiling
+could have detected the contamination. **The length distribution did.** The prior
+corroboration also pointed away from the naive reading: median `visited/expanded` across the
+committed exact runs is 1.24, nowhere near 3K.
+
+`beam_optimal.py` does **not** share this machinery: it imports neither `optimal` nor
+`apply_distributive_property`, and expands via `search_utils.compute_next_search_space:102-129`.
+The two do implement the same three moves (`Or(f, leaf)`, `And(f, leaf)`, `And(f, Not(leaf))`),
+so the grammar is common, but none of C's contamination touches the 2b results.
+
+---
+
+# TARGETED TRACE — the ceiling IS inadmissible, and the hunt narrows
+
+2026-08-01. Published build, unmodified. The two miss pairs only.
+
+P = `(dep=ROOT OR dep=nsubj)`, the length-2 prefix of both missed optima. `true_max(P)` is the
+max IoU over every formula extending P by one move, computed from the existing 30,375
+enumeration — no new search.
+
+```
+trained a=0.2  unit88   IoU(P) = 0.23267674991206472
+                        true_max(P) = 0.25454105110196174   ((dep=ROOT OR dep=nsubj) AND const=NP)
+                        assigned ceiling = 0.23267674991206472
+                        REMOVED by reduce_frontier at threshold 0.23293365307753797
+                        ceiling SHORTFALL = 0.021864
+
+trained a=0.05 unit86   IoU(P) = 0.11240400279264604
+                        true_max(P) = 0.21660649819494585   ((dep=ROOT OR dep=nsubj) AND tag=NN)
+                        assigned ceiling = 0.20339771933907377
+                        REMOVED by reduce_frontier at threshold 0.2037351443123939
+                        ceiling SHORTFALL = 0.013209
+```
+
+`true_max(P)` equals the global in-grammar max on both pairs, so P really is the prefix that
+carries the optimum.
+
+**Pre-committed reading 1 fires: ceiling < true_max(P), so the ceiling is inadmissible.** In
+both cases the node was removed by `reduce_frontier` — not by the `>0` gate, not by the
+node-skip at `:697`.
+
+The ceiling is produced at `optimal.py:366-377` by `path_heuristic.estimate_paths_iou`, whose
+`max_score` becomes the node's key at `:389-399`. **The hunt narrows to the terms inside that
+call.** Two constraints on it, both already established:
+
+- On unit88 the ceiling **equals `IoU(P)` exactly** — the estimator credited P with zero
+  possible improvement from its third move. On unit86 it does not (`IoU(P)` is 0.1124), so
+  the two shortfalls are not produced by the same term.
+- F1 showed the miss survives with `are_disjoint` forced False, so **both** the disjoint and
+  the general estimator produce an inadmissible ceiling for P. The fault is not in the fork.
+
+### Oracle superset check — the miss counts are not inflated
+
+Both searches skip a candidate term already present in the formula
+(`expand_node:534`, `compute_next_search_space:119`); the brute-force enumeration does not, so
+30,375 is a superset of what either search can construct. Verified harmless: the
+distinct-concept max equals the superset max on **27/27 pairs, max abs difference 0.000e+00**.
+
+---
+
+# CORRECTION — the P1 "cancellation" finding was a unit mismatch, and is withdrawn
+
+**P1 itself measured TIME on both sides** (median L5 wall-clock vs 1.942 x median L4-K15 wall
+clock), so its NOT SUPPORTED verdict stands as a time-vs-time test.
+
+**The cancellation narrative built on it does not.** That paragraph compared measured *time*
+ratios against *formula-space count* ratios and concluded the two errors cancelled. Those are
+different quantities, and now that `expanded` is known to be an expand-call count that far
+exceeds the distinct-node count, the bridge between them (cost proportional to space size) has
+no support. Redone with measured counts from `results/length_ladder/`:
+
+```
+                          MEASURED counts      TIME        space model
+L5/L4  at K=8                     8.8x        83.2x           24.0x
+K15/K8 at L4                      3.7x        36.6x           12.4x
+```
+
+The withdrawn claim was "length overshoots the space model 3.5x and K undershoots it by about
+the same, so they cancelled". In **count** terms neither overshoots: both come in *below* the
+space model (2.7x and 3.4x below), which is what pruning is supposed to do. The overshoot was
+entirely in time.
+
+What the measured numbers actually say is cleaner and was invisible before: **per-expand-call
+cost is not constant, and it rises by almost the same factor along both axes** — 83.2/8.8 =
+9.5x going from length 4 to 5 at K=8, and 36.6/3.7 = 9.9x going from K=8 to K=15 at length 4.
+Mask width and estimator work per node grow with both. That is the finding; the cancellation
+was an artifact of dividing a time by a count.
+
+Note the three L5 timeouts/censored rows: the L5/L4 count ratio uses only the 3 units that
+terminated, and their `expanded` for the two timed-out units is -1 (censored), not zero.
