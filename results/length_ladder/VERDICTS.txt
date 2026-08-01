@@ -1,0 +1,89 @@
+======================================================================================
+EXPERIMENT 1 — LENGTH LADDER at K=8 (M=24,199, arm=all, trained alpha=0.1,
+               units 88/92/396/413/510, exact, cap=200k, soft budget 1500s)
+======================================================================================
+
+--- PRE-REGISTERED PREDICTIONS ---
+
+P1  COST EXCEEDS THE SPACE-SIZE RATIO.
+    The (L5,K=8) candidate space is 1.942x the (L4,K=15) space, which is the whole reason
+    K=8 was chosen. I predict wall time overshoots that ratio: median time at (L5,K=8) over
+    the same 5 units will exceed 1.942 x 687.02s = 1334.2s.
+    Why: A*'s admissible bound loosens with remaining depth, so a deeper search prunes a
+    smaller fraction of its space. Candidate count is a floor on cost, not an estimate.
+    SUPPORTED if median(L5,K=8) time > 1334.2s (timeouts counted at their observed wall
+    time, which understates them, so this test is biased AGAINST P1).
+
+P2  PEAK FRONTIER GROWS WITH LENGTH AT FIXED K.
+    peak_frontier at (L5,K=8) > peak_frontier at (L4,K=8) on at least 4 of 5 units.
+    This is the frontier-explosion mechanism restated at constant branching factor: if it
+    fails, the cost of length is not a frontier effect.
+
+P3  CONTROL — K=8 IS GENUINELY CHEAPER THAN K=15 AT MATCHED LENGTH.
+    median time at (L4,K=8) < 343.5s, i.e. under half the (L4,K=15) median of 687.02s.
+    This could fail. If K=8 does not buy a real discount at length 4, the premise of the
+    whole experiment -- spend the K budget on length -- is void and the length-5 number
+    means nothing.
+
+P4  CONTROL — THE DISJOINT ARM STAYS TRIVIAL AT LENGTH 5.
+    lemma-only (disjoint vocabulary) at K=8, length 5 terminates on all 5 units, each in
+    under 10s. At K=50 length 3 it terminated in 1-2 visited nodes. If a disjoint
+    vocabulary also explodes at length 5, cost is not driven by concept overlap and every
+    reading above is void.
+
+P5  LENGTH 6 AT K=8 IS OUT OF REACH AND IS NOT ATTEMPTED BLIND.
+    SPACE[(6,8)]/SPACE[(5,8)] = 24.0. Registered in advance: length 6 is only attempted if
+    the measured median (L5,K=8) time is under 60s, which would put a 24x extrapolation
+    inside the 1500s cap. Otherwise it is reported as not attempted, with the reason.
+
+--- RAW ---
+  length 3, K=8, all categories:
+         unit      peak   visited  expanded    time_s      IoU     cov  halted
+      unit396       455       480       238      0.49   0.1261  0.2923      no
+      unit413       150        59       150      0.06   0.0952   0.077      no
+      unit510       601       430       231      0.46   0.1244  0.1003      no
+       unit88       209        98       188      0.08   0.1816  0.2386      no
+       unit92       379       164       197      0.13   0.1412  0.2156      no
+    timeouts/caps: 0/5
+  length 4, K=8, all categories:
+         unit      peak   visited  expanded    time_s      IoU     cov  halted
+      unit396      3867      7114      2603     81.02   0.1268  0.2939      no
+      unit413      1525      1138      1500      5.49   0.0962  0.0752      no
+      unit510      4165      6665      2511      73.1   0.1244  0.1002      no
+       unit88      2298      1802      1953      8.12   0.1826  0.2369      no
+       unit92      3567      2371      2086     12.68   0.1412  0.2156      no
+    timeouts/caps: 0/5
+  length 5, K=8, all categories:
+         unit      peak   visited  expanded    time_s      IoU     cov  halted
+      unit396     31878        -1        -1   1516.36                     time
+      unit413     12122      9302     12921    456.85   0.0962  0.0752      no
+      unit510     31797        -1        -1   2095.68                     time
+       unit88     18847     15741     17214    703.88   0.1827  0.2442      no
+       unit92     20927     19386     18289   1048.43   0.1425  0.2229      no
+    timeouts/caps: 2/5  (unit396:time, unit510:time)
+  length 5, K=8, lemma-only (disjoint control):
+         unit      peak   visited  expanded    time_s      IoU     cov  halted
+      unit396        11         2        22       0.0   0.1026  0.0929      no
+      unit413         9         1        12       0.0   0.0136  0.0201      no
+      unit510        56         3       251      0.05   0.1445  0.2515      no
+       unit88        27         3       116      0.02    0.014  0.1008      no
+       unit92        27         1        72      0.01   0.1267  0.0929      no
+    timeouts/caps: 0/5
+
+--- BASELINE, pasted from results/beam_vs_exact_K15.csv ---
+    length 4, K=15, same units: times {'unit396': 687.02, 'unit413': 200.69, 'unit510': 1514.55, 'unit88': 400.75, 'unit92': 886.77}
+    median 687.02s, 1 timeout
+
+--- VERDICTS ---
+  P1: NOT SUPPORTED
+      median(L5,K=8) = 1048.43s vs threshold 1334.1s (= 1.942 x 687.02s); times [456.85, 703.88, 1048.43, 1516.36, 2095.68]
+  P2: SUPPORTED
+      peak grew on 5/5 units; unit396 3867->31878, unit413 1525->12122, unit510 4165->31797, unit88 2298->18847, unit92 3567->20927
+  P3: SUPPORTED
+      median(L4,K=8) = 12.68s vs threshold 343.5s (= 0.5 x 687.02s); times [5.49, 8.12, 12.68, 73.1, 81.02]
+  P4: SUPPORTED
+      5 runs, 0 halted, 0 over 10s; times [0.0, 0.0, 0.01, 0.02, 0.05], visited [1, 1, 2, 3, 3]
+  P5: SUPPORTED
+      median(L5,K=8) = 1048.43s; gate is <60s -> length 6 NOT attempted; actually not attempted. SPACE[(6,8)]/SPACE[(5,8)] = 24.0x, so the extrapolated length-6 median is 25162s per unit.
+
+  scored 4/5 SUPPORTED

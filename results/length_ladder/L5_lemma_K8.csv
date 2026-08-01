@@ -1,0 +1,6 @@
+arm,categories,neuron,alpha,n_tokens,n_fire_neuron,units_excluded_min_fire,untrained,density,length,beam,mean_overlap,common_frac,disjoint_pairs,peak_frontier,halted,visited,expanded,estimated,best_iou,time_s,formula,formula_cov,n_and,n_or,n_not,or_categories,max_same_cat_or,n_fires,n_inter
+"lemma-only (disjoint control, scales with K)",lemma,unit88,0.1,24199,2201,0,False,0.09095,5,none,1.0,0.0,56,27,no,3,116,364,0.014,0.02,(((lemma=in OR lemma=man) OR lemma=-PRON-) OR lemma=on),0.1008,0,3,0,lemma+lemma+lemma+lemma,4,2439,64
+"lemma-only (disjoint control, scales with K)",lemma,unit92,0.1,24199,2420,0,False,0.1,5,none,1.0,0.0,56,27,no,1,72,246,0.1267,0.01,(lemma=. OR lemma=on),0.0929,0,1,0,lemma+lemma,2,2249,525
+"lemma-only (disjoint control, scales with K)",lemma,unit396,0.1,24199,2310,0,False,0.09546,5,none,1.0,0.0,56,11,no,2,22,93,0.1026,0.0,((lemma=the OR lemma=man) OR lemma=-PRON-),0.0929,0,2,0,lemma+lemma+lemma,3,2248,424
+"lemma-only (disjoint control, scales with K)",lemma,unit413,0.1,24199,632,0,False,0.02612,5,none,1.0,0.0,56,9,no,1,12,53,0.0136,0.0,lemma=-PRON-,0.0201,0,0,0,,0,487,15
+"lemma-only (disjoint control, scales with K)",lemma,unit510,0.1,24199,2419,0,False,0.09996,5,none,1.0,0.0,56,56,no,3,251,706,0.1445,0.05,(((lemma=a OR lemma=.) OR lemma=the) OR lemma=on),0.2515,0,3,0,lemma+lemma+lemma+lemma,4,6086,1074

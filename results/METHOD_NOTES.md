@@ -672,3 +672,108 @@ Only the third model, enumerating the exact three moves the code emits, matched.
 lesson is the same one recorded above under *diagnostics that inherit the confound they were
 built to detect*: an oracle is only as good as its model of the thing it is checking, and the
 first two models were built by reading the formula classes rather than the expansion function.
+
+---
+
+# EXPERIMENT 1 — LENGTH LADDER at K = 8: does exact search reach length 5?
+
+2026-08-01. `src/exp_length_ladder.py`, raw output in `results/length_ladder/`
+(`L3_all_K8.csv`, `L4_all_K8.csv`, `L5_all_K8.csv`, `L5_lemma_K8.csv`, `VERDICTS.txt`).
+
+The move the previous section invites: length dominates cost far more than K does, so spend
+the K budget on length. Drop K from 15 to 8 and ask whether exact search reaches length 5.
+
+Design is the length-3 tractability grid extended, not a new one — M = 24,199, arm `all`,
+trained alpha = 0.1, `--unit_ids 88 92 396 413 510`, exact, cap 200,000, soft budget 1500s
+(Phase B's threshold, reused unchanged). Alpha, unit set and budget are **not free choices**:
+they are the only values for which comparable exact length-3 and length-4 numbers already
+exist, and any other value breaks the ladder the experiment is built to measure. Lengths 3
+and 4 were re-run **at K = 8** so the length-5 number is compared against its own K.
+
+```
+length 3, K=8, all cats     peak   150.. 601   visited   59.. 480   t = 0.06..   0.49s   0 timeouts
+length 4, K=8, all cats     peak  1525..4165   visited 1138..7114   t = 5.49..  81.02s   0 timeouts
+length 5, K=8, all cats     peak 12122..31878  visited 9302..19386  t = 456.85..2095.68  2 timeouts
+length 5, K=8, lemma ctrl   peak     9..  56   visited    1..    3  t = 0.00..   0.05s   0 timeouts
+```
+
+**Length 5 does not terminate.** 2 of 5 units hit the 1500s soft cap — unit396 at 1516.36s
+and unit510 at 2095.68s (the cap is soft, checked once per 256 heap pushes, so it overshoots;
+see *The time cap is SOFT* above). Both timeouts are reported here and are in the CSV; neither
+is dropped from any statistic below. Because both fall **above** the median, the median time
+of 1048.43s is a genuine completed run (unit92) and is unaffected by the truncation.
+
+## Pre-registered verdicts — 4 of 5 SUPPORTED
+
+Registered in `PREDICTIONS` in `src/exp_length_ladder.py` before any length-5 run existed,
+and printed by the script rather than read off the table.
+
+| | prediction | outcome |
+|---|---|---|
+| **P1** | median(L5,K=8) > 1334.1s, i.e. cost overshoots the 1.942x candidate-space ratio | **NOT SUPPORTED** — 1048.43s |
+| **P2** | peak frontier grows L4→L5 at fixed K on >= 4/5 units | **SUPPORTED** — 5/5 |
+| **P3** | control: median(L4,K=8) < 343.5s | **SUPPORTED** — 12.68s |
+| **P4** | control: disjoint lemma arm still trivial at length 5 | **SUPPORTED** — all 5 under 0.05s, 1–3 visited |
+| **P5** | length 6 attempted only if median(L5,K=8) < 60s | **SUPPORTED** — gate closed, not attempted |
+
+## Why P1 failed is more interesting than P1
+
+P1 predicted that wall time would overshoot the candidate-space ratio, because A*'s
+admissible bound loosens with remaining depth and a deeper search therefore prunes a smaller
+*fraction* of its space. It was scored against `(L5,K=8) / (L4,K=15)`, and that comparison
+folds two separate scalings together. Decomposed against `(L4,K=8)`, which this experiment
+measured for exactly this purpose:
+
+```
+per-unit L5/L4 cost ratio at K=8   83.2x (median of the 3 that terminated)   space ratio 24.0x
+per-unit K15/K8 discount at L4     36.6x (median of per-unit ratios)         space ratio 12.4x
+                                   54.2x (ratio of medians, the form P3 was scored in)
+```
+
+Both terms miss the candidate-space model by roughly the same factor, **in opposite
+directions**. Length overshoots it 3.5x, exactly the mechanism P1 named. K under-shoots it
+by about the same, which P1 did not anticipate — reducing K buys far more than combinatorics
+says it should. The two errors cancelled, and the composite ratio landed near the naive
+prediction for the wrong reason. `K * (3K)^(L-1)` is a poor cost model in both variables;
+it is only accidentally decent in their product here.
+
+Note the two forms of the K discount. P3 was pre-registered on medians of times (54.2x); the
+median of per-unit discounts is 36.6x, and the per-unit spread is wide (8.5x to 69.9x). The
+36.6x figure is the honest per-unit statistic and is the one used above.
+
+## What length 5 actually buys: nothing measurable
+
+The reason to want length 5 is a better explanation. On the three units that terminated:
+
+```
+unit413   IoU 0.0962 -> 0.0962   +0.000%    5.49s ->  456.85s
+unit88    IoU 0.1826 -> 0.1827   +0.055%    8.12s ->  703.88s
+unit92    IoU 0.1412 -> 0.1425   +0.921%   12.68s -> 1048.43s
+```
+
+An 83x cost for at most +0.92% IoU, and exactly zero on one unit. This is a stronger negative
+than the timeouts: even where length 5 is affordable it is not worth affording. It also
+matches the length-3/length-4 pattern already recorded — the marginal length is where the
+cost is, and the explanation quality saturates well before the tractability limit does.
+
+**Caveat on the two timeouts.** unit396 and unit510 are the two most expensive units and
+their length-5 IoUs are unknown, so "length 5 buys nothing" is measured on the three cheapest
+units of five. It is possible the expensive units are expensive *because* there is something
+to find. Nothing here rules that out, and it is not claimed either way.
+
+## Length 6 was not attempted, and the reason was fixed in advance
+
+`SPACE[(6,8)] / SPACE[(5,8)] = 24.0x`, which puts the extrapolated length-6 median at
+**25,162s per unit** — about 7 hours each, 35 hours for the grid, and that extrapolation uses
+the candidate-space ratio that the section above just showed understates length cost by 3.5x.
+P5 gated the attempt on median(L5,K=8) < 60s precisely so this would be a rule rather than a
+judgment call made after seeing an unattractive number. The gate closed. The queue's "if
+length 5 terminates, try length 6" is moot in any case: length 5 did not terminate.
+
+## The control that did the most work
+
+P4 is the one worth keeping. The disjoint `lemma` arm at K=8 **length 5** terminates in 1–3
+visited nodes and under 0.05s — the same trivial behaviour it showed at K=50 length 3. Length
+is free on a disjoint vocabulary. Whatever makes length 5 intractable on the `all` arm is
+concept overlap (mean overlap 2.711, common_frac 0.738 at K=8), not depth as such. Had lemma
+also exploded, the frontier reading in P2 would have been measuring something else entirely.
