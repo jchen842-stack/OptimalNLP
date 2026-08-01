@@ -36,9 +36,10 @@ PRE-REGISTERED:
 import os, sys, time, csv
 import numpy as np
 HERE=os.path.dirname(os.path.abspath(__file__)); REPO=os.path.dirname(HERE); sys.path.insert(0,HERE)
-from exp_beam_width import PAIRS, K, LENGTH, MAX_SENTS, MIN_SUPPORT, CAP
+from exp_beam_width import PAIRS, K, MAX_SENTS, MIN_SUPPORT, CAP
+LENGTH=int(os.environ.get("PART_LENGTH","3"))
 TIME_BUDGET=1500.0
-OUT=os.path.join(REPO,"results","partition_L3.csv")
+OUT=os.path.join(REPO,"results",f"partition_L{LENGTH}.csv")
 FEATS=os.path.expanduser("~/projects/neuron-explanations-nli/nli/data/analysis/snli_1.0_dev.feats")
 
 def build_partition(rtm, tokens):
