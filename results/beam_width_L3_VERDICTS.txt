@@ -1,0 +1,118 @@
+========================================================================================
+EXPERIMENT 2 — BEAM WIDTH vs ACCURACY at length 3 (K=15, M=24,199, 27 pairs)
+========================================================================================
+
+--- PRE-REGISTERED PREDICTIONS ---
+
+B1  AGREEMENT IS MONOTONE NON-DECREASING IN BEAM WIDTH.
+    Across {5, 10, 25, 50, 100, 200}, the count of pairs whose returned mask is identical
+    to exact never strictly decreases as width grows.
+    This can fail. Frontier truncation keeps the top-N by bound, and the incumbent that
+    survives truncation at width W is not guaranteed to survive at width 2W once a
+    different node updates the incumbent first, so monotonicity is an assumption about
+    the search, not a theorem about it.
+    SUPPORTED if agree(5) <= agree(10) <= agree(25) <= agree(50) <= agree(100) <= agree(200).
+
+B2  BEAM 5 DOES NOT REPRODUCE THE PAPER'S BAND ON ALL PAIRS.
+    Ratio-of-averages (exact over beam) at width 5, over all 27 pairs, stays BELOW the
+    bottom of the vision band: < 5.1%.
+    Why: at length 3 the in-grammar space is only K*(3K)^2 = 30,375 formulas, and beam 200
+    already agrees with exact on 20/27, which says most units here have an optimum that is
+    easy to reach. A 40x narrower beam should lose ground but not 5 percentage points of it.
+    SUPPORTED if roa_all(5) < 5.1. NOT SUPPORTED if it reaches or exceeds 5.1.
+
+    Reported alongside but NOT the scored test: the restricted-to-differing statistic. Its
+    denominator set CHANGES with width -- a narrower beam makes more pairs differ, pulling
+    easy small-gap pairs into the restricted set -- so it is not comparable across widths
+    and must not be read as a trend. The all-pairs set is fixed at 27 and is.
+
+B3  NO COLLAPSE IN THE SWEPT RANGE.
+    "Collapse" is defined here, in advance, as agreement falling to 13 or fewer of 27
+    (below half). I predict this never happens, i.e. agreement at width 5 is still >= 14/27.
+    SUPPORTED if min over widths of agree(w) >= 14.
+
+B4  CONTROL — THE EXACT RE-RUN REPRODUCES THE COMMITTED EXACT NUMBERS.
+    Re-running exact on all 27 pairs reproduces the exact_IoU column of
+    results/beam_vs_exact_L3_K15.csv to within 1e-6 on every pair.
+    This could fail. If it does, this sweep is not measured against the same thing the
+    20/27 and +5.05% figures were, and every comparison to them is void.
+
+B5  CONTROL — THE BEAM CAP BINDS WHERE IT SHOULD AND NOWHERE ELSE.
+    On any pair whose EXACT peak frontier never exceeds the beam width W, beam-W must
+    return exact's mask -- the cap was never reached, so the two searches are the same
+    search. Zero violations expected.
+    This could fail. A violation means MAX_FRONTIER_SIZE changes the result on runs where
+    it was never active, i.e. the beam patch is not the no-op it is verified to be off the
+    cap, and the whole beam-vs-exact series would need re-examining.
+
+--- NO-SOLUTION RUNS (reported, never dropped silently) ---
+    The search returned best_label=None / best_iou=-1.0 / visited=0 -- the beam
+    cap evicted every node that could have become the answer.
+      beam  no_solution
+         5        8/27
+        10        3/27
+        25        2/27
+        50        0/27
+       100        0/27
+       200        0/27
+    pairs returning a solution at ALL 6 widths: 19/27  (dropped 8)
+    dropped: trained/a=0.05/unit395, trained/a=0.05/unit412, trained/a=0.05/unit87, trained/a=0.1/unit510, untrained/a=0.05/unit396, untrained/a=0.05/unit510, untrained/a=0.05/unit92, untrained/a=0.1/unit413
+
+--- FIXED-SET SWEEP (the like-for-like statistic; n constant across widths) ---
+      beam    n     agree  roa_all%   band?  medtime
+         5   19    0/19       22.26     out     0.01
+        10   19    0/19       22.08     out     0.01
+        25   19    2/19       18.52     out     0.02
+        50   19    3/19        7.30     out     0.05
+       100   19    9/19        5.31      IN     0.11
+       200   19   16/19        0.57     out     0.25
+
+--- ALL-PAIRS SWEEP (roa is MEANINGLESS wherever no_solution > 0) ---
+      beam   agree/n  roa_all%  roa_diff%  n_diff     band?  capbound  medtime
+         5    0/27     -192.81    -192.81      27       out   27/27       0.01
+        10    0/27      793.54     793.54      27       out   27/27       0.01
+        25    3/27      166.93     249.75      24       out   27/27       0.02
+        50    5/27        7.54       9.05      22       out   27/27       0.05
+       100   12/27        5.17       8.85      15        IN   27/27       0.12
+       200   20/27        0.96       5.05       7       out   27/27       0.25
+    roa_diff% is NOT comparable across widths (its denominator set moves); shown for reference only.
+
+--- STRATIFIED WITHIN (arm, alpha) — agreement count per stratum ---
+                 stratum   n     b5    b10    b25    b50   b100   b200
+           trained a=0.2   3      0      0      1      0      0      3
+           trained a=0.1   5      0      0      2      2      3      4
+          trained a=0.05   5      0      0      0      0      3      4
+         untrained a=0.2   4      0      0      0      0      1      3
+         untrained a=0.1   5      0      0      0      2      3      4
+        untrained a=0.05   5      0      0      0      1      2      2
+
+--- STRATIFIED WITHIN (arm, alpha) — ratio-of-averages %, all pairs ---
+                 stratum   n      b5     b10     b25     b50    b100    b200
+           trained a=0.2   3   17.87   40.73   29.97   11.50   11.26    0.00
+           trained a=0.1   5 -236.48   19.31    8.22    3.31    2.72    0.03
+          trained a=0.05   5 -121.41 -134.59   22.27   11.39    3.01    2.12
+         untrained a=0.2   4   18.38   14.31   16.87    6.94    3.73    1.22
+         untrained a=0.1   5 -252.07   22.46   16.05    5.04    4.81    0.99
+        untrained a=0.05   5 -116.05 -169.23 -126.25    7.43    3.64    2.42
+
+--- BASELINE, pasted from results/phaseB_report_L3.txt ---
+    beam 200 vs exact: 20/27 agree, roa_all = +0.96%, roa_restricted = +5.05%
+
+--- VERDICTS ---
+  B1: SUPPORTED
+      agreement by width 5:0, 10:0, 25:3, 50:5, 100:12, 200:20
+  B2: VOID as pre-registered — B2 as pre-registered is VOID (statistic poisoned by -1.0); re-scored as B2'
+      roa_all(beam 5) over all 27 pairs = -192.81%, which is negative because 8 runs contributed IoU = -1.0. The '< 5.1%' test passes on this number, but the number is not a gap. Not counted as support.
+  B2': NOT SUPPORTED
+      [re-scored on the fixed 19-pair set] roa(beam 5) = +22.26% vs band floor 5.1%; band is 5.1-6.5%, so beam 5 OVERSHOOTS it. NOTE: this measures our frontier cap, NOT the paper's beam_optimal algorithm — see experiment 2b.
+  B3: NOT SUPPORTED
+      min agreement over widths = 0/27 at beam 5; collapse threshold is <=13
+  B4: SUPPORTED
+      27/27 pairs matched against the committed exact_IoU; 0 mismatches
+  B5: SUPPORTED
+      0 of 162 (pair, width) runs never reached the cap (exact_peak <= W); 0 of those disagreed with exact
+
+  cross-check: mask test vs phaseB_report's (n_fires, n_inter) proxy disagree on 0/162 runs  (proxy is safe on this data)
+  cross-check: at beam 200, 20/27 agree extensionally, 20/27 agree as strings
+
+  scored 3/5 SUPPORTED

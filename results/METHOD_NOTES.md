@@ -777,3 +777,125 @@ visited nodes and under 0.05s — the same trivial behaviour it showed at K=50 l
 is free on a disjoint vocabulary. Whatever makes length 5 intractable on the `all` arm is
 concept overlap (mean overlap 2.711, common_frac 0.738 at K=8), not depth as such. Had lemma
 also exploded, the frontier reading in P2 would have been measuring something else entirely.
+
+---
+
+# EXPERIMENT 2a — BEAM WIDTH vs ACCURACY at length 3 (frontier cap)
+
+2026-08-01. `src/exp_beam_width.py`, raw output in `results/beam_width_L3.csv` and
+`results/beam_width_L3_VERDICTS.txt`.
+
+Same 27 (arm, alpha, unit) pairs as `results/beam_vs_exact_L3_K15.csv`, K = 15, length 3,
+M = 24,199. Widths {5, 10, 25, 50, 100, 200} plus exact, all in-process against the same
+masks. Formula equality is tested on the winning **token mask itself**, bit-for-bit, not on
+the string and not on the `(n_fires, n_inter)` proxy.
+
+**Read the title carefully.** This measures `MAX_FRONTIER_SIZE`, our frontier cap. It is
+**not** the paper's beam. See the correction below and experiment 2b.
+
+## The outcome none of B1–B5 anticipated: narrow beams return nothing at all
+
+```
+beam    5   no solution on  8/27
+beam   10   no solution on  3/27
+beam   25   no solution on  2/27
+beam   50   no solution on  0/27
+beam  100   no solution on  0/27
+beam  200   no solution on  0/27
+```
+
+`best_label=None`, `best_iou=-1.0`, `visited=0` — upstream's `best_results = (-1.0, None)`
+initialiser is never updated. `perform_search`'s docstring sanctions this ("`best_label` is
+a formula object or `None` if no valid formula is found"), so it is not a bug in our patch.
+
+Mechanism: `_apply_beam_cap` keeps the top-N nodes **by estimated ceiling**. An `INDIVIDUAL`
+node has been fully resolved and carries its *true* IoU, which sits below the *optimistic*
+ceilings of unexpanded nodes. The cap therefore preferentially evicts exactly the nodes that
+could have become the answer. The narrower the beam, the more reliably it throws away the
+solution it is looking for. Six of the eight no-solution pairs are at alpha = 0.05, the
+sparsest units, where true IoUs are lowest and lose to ceilings by the widest margin.
+
+**This broke the statistic.** An IoU of -1.0 inside a ratio-of-averages produces
+`-192.81%` at width 5 and `+793.54%` at width 10. Those numbers are in the all-pairs table
+in the raw output and are not gaps; they are artefacts and must not be quoted.
+
+## The corrected sweep, on a fixed 19-pair set
+
+The like-for-like fix is a denominator that does not move: the 19 pairs that returned a
+solution at **every** width. The 8 dropped pairs are named in the raw output, not silently
+discarded.
+
+```
+beam     n    agree    roa_all%   band?   median time
+   5    19     0/19      22.26     out       0.01s
+  10    19     0/19      22.08     out       0.01s
+  25    19     2/19      18.52     out       0.02s
+  50    19     3/19       7.30     out       0.05s
+ 100    19     9/19       5.31      IN       0.11s
+ 200    19    16/19       0.57     out       0.25s
+```
+
+**Answer to "at what width does agreement collapse":** between 100 and 50. Agreement halves
+from 9/19 to 3/19 across that single step and is gone by 25. The gap statistic moves with it
+— it crosses the paper's +5.1–6.5% vision band at **beam 100**, from below at 200 and from
+far above at 50.
+
+**Answer to "does beam 5 reproduce the paper's gap":** not with this mechanism. `+22.26%`,
+roughly 3.5x the top of the band, and that is *after* excluding the 8 pairs where it returned
+nothing. The honest reading is not "beam 5 has a bigger gap" but "beam 5 is not a working
+search here at all".
+
+## Pre-registered verdicts
+
+| | prediction | outcome |
+|---|---|---|
+| **B1** | agreement monotone non-decreasing in width | **SUPPORTED** — 0, 0, 3, 5, 12, 20 over 27 |
+| **B2** | roa_all(beam 5) < 5.1% | **VOID** — see below |
+| **B2'** | re-scored on the fixed 19-pair set | **NOT SUPPORTED** — +22.26%, overshoots the band |
+| **B3** | no collapse: agreement stays >= 14/27 | **NOT SUPPORTED** — 0/27 at beam 5 |
+| **B4** | control: exact re-run reproduces committed exact_IoU | **SUPPORTED** — 27/27 within 1e-6 |
+| **B5** | control: cap binds only where it should | **SUPPORTED, but vacuously** — see below |
+
+**B2 is void, and this is the interesting failure.** As written it tested `roa_all(beam 5)
+< 5.1%`, and `-192.81% < 5.1%` is true, so the script would have printed SUPPORTED. It
+would have been a pass earned by the statistic collapsing, on a prediction whose whole
+content was that the gap stays small. Recorded here because it is a new instance of an old
+shape in this file — *measuring against the knob rather than the quantity it controls* — and
+because a one-sided threshold test cannot tell "small" from "broken". The re-score B2' uses
+the fixed-set statistic and comes out NOT SUPPORTED, which is the opposite verdict.
+
+**B5 passed vacuously and is not evidence.** It checked that beam-W agrees with exact on any
+pair where exact's peak frontier never exceeded W. Exact peak frontiers here run 344 to 2441,
+so no run in the whole 162 satisfied the antecedent. The cap bound on every single run. The
+prediction was well-formed but untestable on this grid, and it is recorded as untested rather
+than as a pass.
+
+**Cross-check that came out clean:** the mask test and `phaseB_report.py`'s
+`(n_fires, n_inter)` proxy disagree on **0 of 162** runs, so the existing 20/27 figure is
+safe as computed. At beam 200, 20/27 agree extensionally and 20/27 agree as strings.
+
+---
+
+## CORRECTION to "(3) Beam-width asymmetry — strengthens whatever gap remains"
+
+The earlier passage argues: the paper uses beam 5, we used beam 200, "a wider beam is a
+strictly better approximation and should produce a *smaller* gap than theirs, so any gap we
+measure at or above their band is measured against a handicap in their favour."
+
+**The monotonicity half survives; the inference to the paper does not.** B1 confirms
+agreement is monotone in width on our mechanism, so beam 200 is indeed the better
+approximation of the two. But the passage then treats our width-5 and their width-5 as the
+same object, and they are not:
+
+- Ours is `MAX_FRONTIER_SIZE`, a cap on `optimal.py`'s A* frontier ranked by **estimated
+  ceiling**. At width 5 it returns no formula on 8 of 27 units.
+- Upstream ships `compositional/beam_optimal.py`, a level-wise beam over **complete formulas
+  ranked by exact IoU**, seeded from the previous level's best. Every leaf is a scored
+  length-1 formula, so it cannot return `None` on a non-degenerate neuron.
+
+A method that returns nothing on 30% of units is not what the paper reports at its own
+default beam size, which is strong evidence the two mechanisms are different. So "their beam
+5 is a handicap in their favour" is not a safe inference — it compares our gap against a
+weaker version of a *different algorithm*. The original passage is left as written, per this
+file's convention; this correction supersedes its final inference only. Experiment 2b runs
+`beam_optimal.py` itself to settle it.
