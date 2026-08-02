@@ -4757,3 +4757,80 @@ was vivid precisely because `0.0` was doing the work of a measurement while bein
 The guard that would have caught it is the one already written: **assert numeric-and-finite,
 and bucket sentinels separately, before any comparison.** It was applied to `nan` and `None`
 and not to a plain float `0.0` — which is exactly the sentinel that does not look like one.
+
+---
+
+# THE TWO-SITE SPLIT IS NOT EXHAUSTIVE — nine zero sources, and E1'/E1''/E1''' cannot be scored
+
+2026-08-02. Read before instrumenting, and the reading stops the run.
+
+## Item 2 — both links VERIFIED
+
+**Link 1: does `max_iou` at `:48-50` become `new_max` at `optimal.py:718-719`? YES.**
+`max_min_iou_from_union_intersection` (which contains `:48-50`) is called from
+`update_paths_iou` at `:213, :228, :242, :259, :299`, and those values feed the
+`new_max = max(...)` at `:302`. The zeroing propagates.
+
+**Link 2: is `minimum_threshold` inside `path_heuristic` the same value logged at `:747`? YES.**
+`optimal.py:719` passes `minimum_threshold=minimum_threshold` — the same local, and the same
+one the `:747` logging call reads.
+
+Neither link fails, so the argument is not void on that account.
+
+## Item 1 — but the premise is wrong. NINE zero sources, not two.
+
+```
+:50    return 0.0, 0.0     computed max_iou below minimum_threshold  (reached from 5 call sites)
+:174   return 0.0, 0.0     label_quantities is None -- never computed
+:217   or_new_max,        or_new_min        = 0, 0     path not applicable
+:232   and_not_new_max,   and_not_new_min   = 0, 0     path not applicable
+:246   and_new_max,       and_new_min       = 0, 0     path not applicable
+:263   and_andnot_new_max, and_andnot_new_min = 0, 0   path not applicable
+:273   comb_and_or_new_max, comb_and_or_new_min = 0, 0 path not applicable
+:283   or_not_new_max,    or_not_new_min    = 0, 0     path not applicable
+:304   every_new_max,     every_new_min     = 0, 0     path not applicable
+```
+
+**And `new_max = max(...)` over all path values (`:302`).** So `new_max == 0.0` requires
+**every** path to be zero, and that can be any mixture of the nine sources within a single
+call. A per-event "which site produced it" is not well defined — several did.
+
+## Consequence — E1', E1'' and E1''' cannot be scored as registered
+
+All three were framed on a **binary** split between `:48-50` and `:172-174`. That split does
+not exist:
+
+- **E1'** (mostly `:48-50` -> estimate computed, fell below threshold, so it under-bounded a
+  FINAL node) — **cannot be established**, because a `0.0` reaching `new_max` may be seven
+  not-applicable defaults plus one threshold-zeroing, and "the estimate was computed and fell
+  below" would then be true of one path and vacuous for the rest.
+- **E1''** (mostly `:172-174` -> quantities never computed) — same problem inverted.
+- **E1'''** (mixed, claim only what the `:48-50` subset supports) — the subset is not
+  separable at this granularity.
+
+**Nothing is claimed.** Resolving it needs a per-path source trace inside `path_heuristic`,
+which is more instrumentation than the standing posture allows, and I am not adding it
+unasked.
+
+## Item 4 — the threshold/exact-IoU relation, which does NOT depend on the split
+
+This is checkable and worth recording, because it is what E1' was reaching for:
+
+**For all 45 events the node is FINAL, and by construction of the filtered set its exact IoU
+exceeds the incumbent at that moment.** In the sampled rows `minimum_threshold` and the
+incumbent are equal, but across all 45 the two diverge (24 with `threshold <= incumbent`, 21
+with `threshold > incumbent`), so **`exact_iou > incumbent` does not entail
+`exact_iou > minimum_threshold`** and the count for the threshold relation specifically has not
+been measured. It is not quoted.
+
+## State
+
+**What survives is unchanged from the E1-void entry:** the exit path (45/45 at `:747`,
+M3 0.0%), the discard event, the 2/27 misses with two-instrument agreement, and the fact that
+the `:747` decision rests on a `new_max` of `0.0` whose composition is not recoverable without
+further hooks.
+
+**The report's central sentence is already correct for this state** — it says the discard is
+taken on a zeroed flag and that we cannot say what the estimate was. **No further rewrite is
+needed.** But per the standing condition, the push waits: it was made conditional on E1'/E1''/
+E1''' landing, and none of them can.
