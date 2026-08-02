@@ -3396,3 +3396,97 @@ There are **two** re-insertion sites both tagged `"sample"` — the estimate-dec
 them, so which one carries the excess is **unmeasured**; the trigger `new_max < -e_node` fires
 on ~4% of flat pushes against ~29% per-sample, which is sufficient to produce the 8.6x without
 invoking the second site at all.
+
+---
+
+# ITEM 4 — THE EVENT-ORDERING HARM MEASUREMENT. Gate passed.
+
+2026-08-02. `src/exp_event_ordering.py`, output `results/event_ordering_L3.txt`.
+Length 3, K=15, M=24,199, all 27 pairs, both partitions.
+
+```
+measure                                             flat     per-sentence
+OPPORTUNITY  inadmissible ceilings (set-based)     14/27        13/27
+OPPORTUNITY  all optimal prefixes pruned (bound)    4/27         4/27
+OPPORTUNITY  optimal leaf ancestors pruned      31 / 24 pairs      -
+HARM         pairs that actually lost the optimum      2            0
+SENTINEL     optimal formula never CREATED            0            0
+SENTINEL     created, never scored or dropped         2            0
+SENTINEL     pair timed out                           0            0
+```
+
+**14 opportunities produce 2 harms; 13 produce 0. The tightest bound overstates by 2x and by
+4 -> infinity.** That gap is the result.
+
+**Margin redefined as THRESHOLD HEADROOM** — ceiling minus incumbent threshold at the scoring
+pop. Copy-independent and continuous. It replaces the pop-distance margin, which was not a
+clean quantity: it went negative (-25, -183, -217) whenever copies of a node interleaved.
+
+```
+flat          25 scored optima   min +0.00093000  median +0.06700778  max +0.39505257
+per-sentence  27 scored optima   min +0.00027657  median +0.12325959  max +0.39668945
+```
+
+Comparable to the two prefix-level drop margins (0.00025690, 0.00033742): **the tightest
+surviving optimum cleared the threshold by 0.00093 flat and 0.00028 per-sentence** — the same
+order as the margins by which the lost prefixes failed.
+
+## The loss site is NOT `reduce_frontier`, and the assumed headline does not hold
+
+Event dump, optimal formula on trained a=0.2 unit88:
+
+```
+t=348  CREATED  heappush   ceiling=0.4175506268081003  threshold=0.25056904400606983
+t=349  POPPED   heappop    ceiling=0.4175506268081003  threshold=0.25056904400606983
+(no SCORED, no DROPPED — the node ends here)
+```
+
+**Popped with an aggregated ceiling of 0.4176, sitting well ABOVE both the threshold (0.2506)
+and its own exact IoU (0.2545), then discarded before scoring.** Not dropped by
+`reduce_frontier`; not skipped by the `:697` threshold test, since 0.4176 > 0.2506.
+
+The only remaining path is `optimal.py:699-709`: the node is re-estimated with the **sample**
+heuristic, and if `new_max < -e_node` and `new_max < minimum_threshold` it is neither re-pushed
+nor scored — it is silently dropped.
+
+**So the killing bound is the REFINED estimate, not the aggregated one.** The proposed headline
+— *"a complete formula discarded on an upper bound below its own IoU"* — is **NOT supported as
+stated**: the bound it carried when popped is *above* its IoU and therefore admissible. The
+refined estimate that replaced it is what fell below the threshold, and **its value is not
+captured by the current instrumentation**, which sees only pushes, pops, drops and scores. One
+further hook on `path_heuristic.update_paths_iou` would settle it.
+
+**Nothing is written into `UPSTREAM_REPORT.md` on this.** The claim needs the `new_max` value,
+and asserting it from control flow without measuring it is the named failure mode from earlier
+in this session.
+
+## "Prefix never CREATED" 1/3 -> 0/0 was an id-cache artifact — and the ties conclusion survives
+
+The exposure audit reported *"P* never entered the frontier"* on **1 of 27 flat and 3 of 27
+per-sentence**. Re-measured with corrected instrumentation, both are **0**. The old counts came
+from `cache[id(f)]`: formula objects are short-lived, CPython reuses ids after GC, and the
+cache returned stale answers non-deterministically.
+
+**That false signal was the trigger for the entire ties / `n_prefixes` investigation.** The
+independence must be stated rather than left to a reader:
+
+> **The `n_prefixes` conclusion does not depend on the event hooks.** It rests entirely on the
+> brute-force prefix enumeration — pure numpy over concept masks, no instrumentation, no
+> `id()`. The 1-3 prefixes per optimum, the 2/3 signature-space share, the operator-repetition
+> derivation, and the finding that both losses have `n_prefixes = 1` all come from that
+> enumeration. **A false trigger led to a true investigation.** The conclusion survives its own
+> origin.
+
+## STANDING RULE — never key on object identity
+
+Second identity defect in this project, and worse than the first.
+
+```
+first  : F.Or(a,b) vs F.Or(b,a)   structurally equal, distinct objects   deterministic, VISIBLE
+second : cache[id(f)]             ids reused after GC                    non-deterministic, SILENT
+```
+
+**Key on the evaluated mask or a canonical string. Never on `id()`, and never on object
+identity for formula objects.** The first produced an obviously wrong answer — 0 of 27 nodes
+found — and was caught in minutes. The second produced *plausible* answers, 1 and 3, small
+numbers in the right range, and survived long enough to launch an investigation.

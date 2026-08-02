@@ -227,6 +227,11 @@ to work already committed. Not one was prevented at the moment of writing, inclu
 author who had the list open. A checklist is a review instrument; treating it as a prophylactic
 is the same error as treating `11/11` as evidence of correctness.
 
+**The only metric in this section that measures harm rather than opportunity required three
+corrections before it reproduced a known answer — a subject one level too shallow, a missed
+`heapify` entry path, and an `id()`-keyed cache — and all three were found by debugging
+against a validation gate, not by inspection.** The gate is why they were found at all.
+
 There is also a class it cannot reach at all: **asserting code behaviour from a name, an
 expression, or an intent rather than from the control flow** (four occurrences this session,
 recorded in `results/METHOD_NOTES.md`). No comparison precondition addresses it. The remedy is
