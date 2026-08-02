@@ -1,0 +1,104 @@
+R1/R2 — the MEASURING version of the unevaluated-final-formula event, at K=15 and K=50.
+
+WHAT WAS WRONG. The event is: a formula flagged FINAL, POPPED, never SCORED, whose exact IoU
+exceeded the incumbent at that moment. The test previously used was "refinement calls carrying
+next_op == INDIVIDUAL" (84.7% at K=50). That is normal behaviour -- every node is estimated on
+all four paths and scored on pop -- and it contains neither "never scored" nor "exceeded the
+incumbent". It measured the wrong quantity, and it had already been elevated to "the only
+finding that survives at paper-adjacent settings" before being checked.
+
+PRE-REGISTERED:
+  R1  count > 0 at K=50  -> the event is configuration-free
+  R2  count == 0 at K=50 -> the event is K=15 specific too
+
+MEASURED PER FORMULA: flagged FINAL (next_op == "INDIVIDUAL") AND popped AND never scored AND
+exact IoU > incumbent threshold at the moment of the pop.
+
+UNCOVERED-REMOVAL GATE. A zero is uninterpretable if formulas can vanish before ever being
+popped. The silent non-append at estimate_iou_frontier:389 is hooked here by diffing the input
+frontier against the returned estimates. The six `continue` sites are NOT individually hooked;
+they act AFTER a pop, so they cannot hide a node from the pop counter -- they are why a popped
+node ends up unscored, which is the thing being counted, not a way to miss one.
+
+Usage:  python src/exp_final_discard.py 15 | 50
+
+### K = 15 ###
+
+  trained a=0.2 unit88: 1 of 341 popped-FINAL never scored with IoU > incumbent
+      IoU=0.24186209310465523 > incumbent=0.23267674991206472   ((tag=NN OR dep=nsubj) AND (NOT dep=pobj))
+  trained a=0.2 unit92: 8 of 594 popped-FINAL never scored with IoU > incumbent
+      IoU=0.254614412136536 > incumbent=0.22927550517496303   ((const=PP OR dep=punct) AND (NOT tag=DT))
+      IoU=0.254614412136536 > incumbent=0.22927550517496303   ((const=PP OR dep=punct) AND (NOT dep=det))
+      IoU=0.23975588491717523 > incumbent=0.23890299644489588   ((const=PP OR dep=punct) AND (NOT lemma=a))
+  trained a=0.2 unit413: 11 of 44 popped-FINAL never scored with IoU > incumbent
+      IoU=0.3733247560844859 > incumbent=0.29452712433989436   ((const=NP AND (NOT const=PP)) AND (NOT dep=prep))
+      IoU=0.37493275954814415 > incumbent=0.29452712433989436   ((const=NP AND (NOT const=PP)) AND (NOT dep=pobj))
+      IoU=0.38598442714126807 > incumbent=0.29452712433989436   ((const=NP AND (NOT const=PP)) AND (NOT dep=punct))
+  trained a=0.1 unit88: 2 of 453 popped-FINAL never scored with IoU > incumbent
+      IoU=0.16430757459831677 > incumbent=0.16393129770992365   ((dep=ROOT OR dep=nsubj) AND (NOT tag=DT))
+      IoU=0.16739007359879224 > incumbent=0.16393129770992365   ((tag=NN OR dep=nsubj) AND (NOT dep=pobj))
+  trained a=0.1 unit396: 18 of 736 popped-FINAL never scored with IoU > incumbent
+      IoU=0.11943189154293092 > incumbent=0.11561011359472334   ((const=VP AND const=PP) AND (NOT lemma=a))
+      IoU=0.11943189154293092 > incumbent=0.11561011359472334   ((const=VP AND const=PP) AND (NOT synset=angstrom.n.01))
+      IoU=0.12072217731069793 > incumbent=0.11561011359472334   ((const=PP AND (NOT tag=NN)) AND (NOT lemma=a))
+  trained a=0.1 unit413: 3 of 326 popped-FINAL never scored with IoU > incumbent
+      IoU=0.07419566644780039 > incumbent=0.07325383304940375   ((tag=NN OR dep=ROOT) AND (NOT const=VP))
+      IoU=0.07523885350318471 > incumbent=0.07325383304940375   ((dep=ROOT OR dep=nsubj) AND const=NP)
+      IoU=0.07792706333973129 > incumbent=0.07325383304940375   ((dep=ROOT OR dep=nsubj) AND (NOT const=VP))
+  trained a=0.1 unit510: 4 of 1372 popped-FINAL never scored with IoU > incumbent
+      IoU=0.1477434679334917 > incumbent=0.1476032273374466   ((lemma=a OR dep=punct) AND (NOT tag=IN))
+      IoU=0.1477434679334917 > incumbent=0.1476032273374466   ((synset=angstrom.n.01 OR dep=punct) AND (NOT tag=IN))
+      IoU=0.1484226529836564 > incumbent=0.1476032273374466   ((const=PP AND tag=DT) OR lemma=.)
+  trained a=0.05 unit86: 1 of 248 popped-FINAL never scored with IoU > incumbent
+      IoU=0.1771041084962106 > incumbent=0.15561118064246976   ((dep=ROOT OR dep=nsubj) AND const=NP)
+  trained a=0.05 unit91: 1 of 620 popped-FINAL never scored with IoU > incumbent
+      IoU=0.10566283358646127 > incumbent=0.10538844405972733   ((dep=ROOT OR dep=nsubj) AND (NOT tag=DT))
+  trained a=0.05 unit395: 1 of 679 popped-FINAL never scored with IoU > incumbent
+      IoU=0.08683592916577769 > incumbent=0.08661417322834646   ((dep=ROOT OR dep=nsubj) AND (NOT tag=DT))
+  trained a=0.05 unit412: 3 of 687 popped-FINAL never scored with IoU > incumbent
+      IoU=0.0974102413184226 > incumbent=0.09681528662420383   ((dep=prep OR lemma=.) AND (NOT const=VP))
+      IoU=0.0980507974010632 > incumbent=0.09681528662420383   ((tag=IN OR lemma=.) AND (NOT const=VP))
+      IoU=0.09704852426213106 > incumbent=0.09681528662420383   ((const=NP AND tag=IN) OR lemma=.)
+  untrained a=0.2 unit88: 18 of 825 popped-FINAL never scored with IoU > incumbent
+      IoU=0.19563028594442208 > incumbent=0.19453637012523523   ((const=NP AND const=PP) AND (NOT lemma=a))
+      IoU=0.19563028594442208 > incumbent=0.19453637012523523   ((const=NP AND const=PP) AND (NOT synset=angstrom.n.01))
+      IoU=0.19734330864951524 > incumbent=0.19453637012523523   ((const=PP OR tag=NN) AND (NOT dep=det))
+  untrained a=0.2 unit396: 2 of 1066 popped-FINAL never scored with IoU > incumbent
+      IoU=0.25183038438072 > incumbent=0.24802140229628805   ((lemma=a OR lemma=.) AND (NOT const=PP))
+      IoU=0.25183038438072 > incumbent=0.24802140229628805   ((synset=angstrom.n.01 OR lemma=.) AND (NOT const=PP))
+  untrained a=0.2 unit510: 1 of 433 popped-FINAL never scored with IoU > incumbent
+      IoU=0.26779307950468695 > incumbent=0.2655850540806293   ((tag=NN OR lemma=.) AND (NOT dep=nsubj))
+  untrained a=0.1 unit88: 6 of 893 popped-FINAL never scored with IoU > incumbent
+      IoU=0.11374488403819918 > incumbent=0.11080236193122613   ((const=NP AND tag=NN) AND (NOT dep=nsubj))
+      IoU=0.12007092797433083 > incumbent=0.11654692667350895   ((const=PP OR tag=NN) AND (NOT dep=det))
+      IoU=0.12007092797433083 > incumbent=0.11654692667350895   ((const=PP OR tag=NN) AND (NOT tag=DT))
+  untrained a=0.1 unit92: 1 of 494 popped-FINAL never scored with IoU > incumbent
+      IoU=0.18289241622574956 > incumbent=0.17321924144310824   ((tag=NN OR lemma=.) AND (NOT const=VP))
+  untrained a=0.1 unit396: 3 of 823 popped-FINAL never scored with IoU > incumbent
+      IoU=0.14181167669539763 > incumbent=0.13002232142857142   ((tag=NN OR lemma=.) AND (NOT const=PP))
+      IoU=0.14863013698630137 > incumbent=0.13002232142857142   ((tag=NN OR lemma=.) AND (NOT const=VP))
+      IoU=0.14181167669539763 > incumbent=0.13617200674536256   ((tag=NN AND (NOT const=PP)) OR lemma=.)
+  untrained a=0.1 unit413: 2 of 1102 popped-FINAL never scored with IoU > incumbent
+      IoU=0.12654473554127532 > incumbent=0.12203508771929825   ((const=VP AND (NOT tag=NN)) OR dep=prep)
+      IoU=0.12794355181501318 > incumbent=0.12203508771929825   ((const=VP AND (NOT tag=NN)) OR dep=ROOT)
+  untrained a=0.1 unit510: 1 of 790 popped-FINAL never scored with IoU > incumbent
+      IoU=0.15440487347703843 > incumbent=0.15200129638632312   ((dep=pobj OR lemma=.) AND (NOT const=VP))
+  untrained a=0.05 unit88: 19 of 658 popped-FINAL never scored with IoU > incumbent
+      IoU=0.07339449541284404 > incumbent=0.06967106967106967   ((tag=NN OR dep=ROOT) AND const=PP)
+      IoU=0.07096933728981207 > incumbent=0.06967106967106967   ((tag=NN OR dep=nsubj) AND const=VP)
+      IoU=0.07264957264957266 > incumbent=0.06967106967106967   ((tag=NN OR dep=nsubj) AND const=PP)
+  untrained a=0.05 unit92: 14 of 678 popped-FINAL never scored with IoU > incumbent
+      IoU=0.10010764262648009 > incumbent=0.09669898147011903   ((tag=NN OR dep=pobj) AND (NOT const=PP))
+      IoU=0.09892761394101876 > incumbent=0.09669898147011903   ((tag=NN OR dep=prep) AND (NOT const=PP))
+      IoU=0.09758117958913187 > incumbent=0.09669898147011903   ((const=NP OR const=PP) AND tag=NN)
+  untrained a=0.05 unit396: 3 of 1558 popped-FINAL never scored with IoU > incumbent
+      IoU=0.07518796992481203 > incumbent=0.06860632183908046   ((tag=IN OR lemma=.) AND (NOT const=VP))
+      IoU=0.0712392312789927 > incumbent=0.06860632183908046   ((tag=IN OR lemma=.) AND (NOT const=PP))
+      IoU=0.07402073732718895 > incumbent=0.06860632183908046   ((dep=prep OR lemma=.) AND (NOT const=VP))
+  untrained a=0.05 unit413: 2 of 960 popped-FINAL never scored with IoU > incumbent
+      IoU=0.07992133023422135 > incumbent=0.07840440165061899   ((tag=IN OR dep=ROOT) AND (NOT tag=NN))
+      IoU=0.08409250175192712 > incumbent=0.07840440165061899   ((tag=IN OR dep=pobj) AND (NOT const=PP))
+
+  TOTAL: 125 events across 27 pairs, 23 pairs affected
+  silent non-appends observed at estimate_iou_frontier: 468645 (gate: nodes CAN vanish pre-pop, so a zero would need this to be 0)
+  -> R1

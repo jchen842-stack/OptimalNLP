@@ -36,6 +36,7 @@ verdict rather than an error.
 | 3 | **Expanded-count vs formula-space** | `K*(3K)^(L-1)` formula-space ratios (24.0x, 12.4x) | measured **wall-clock** ratios (83.2x, 36.6x) | the P1 "cancellation" finding, withdrawn |
 | 4 | **`nan` sentinel** | `true - x > tol` | `x` was `nan` / `None` / no-solution | 12 no-label runs scored as successes; 10 comparison sites still unguarded |
 | 5 | **Treatment-dependent median membership** | all-27 median | timed-out peaks are truncated, and membership moves with the treatment | corrected to a matched set before the L4 run (A1) |
+| 17 | **"Reproduces at K=50" measured a different event** (assistant) | the event: FINAL, popped, **never scored**, exact IoU **above the incumbent** | the test: refinement calls carrying `next_op == INDIVIDUAL` (84.7%) — normal behaviour, containing neither condition | challenged on review, before the measuring version existed |
 | 16 | **Ceiling compared against the wrong quantity** (assistant) | assigned ceiling of the dropped entry | `true_max(P)` over *extensions*, while the dropped entry was the **INDIVIDUAL (stop-here)** path | logging all four path estimates pre-filter, as instructed, before hand-computing anything |
 | 15 | **P7 registered against the wrong dependent variable** (assistant) | rationale: pruning -> nodes **expanded** (1.03x, near-invariant as predicted) | registered on **peak frontier** (1.39x), which also counts re-insertions | measuring refinement churn to explain the 1.39x/1.03x split |
 | 14 | **One diary consequence hung off a disjunction** | P5 = (a) OR (b), consequence "D5.0 superseded" | (a) and (b) fired in **opposite directions**; the scorer emitted a verdict the data contradicts | L4 landed and the frontier had *grown* while timeouts fell |
@@ -139,7 +140,13 @@ Discrimination is what makes a Power failure invisible.
 | 6 | Depth-3 reference under a depth-4 search | **Reference** — enumeration depth did not match search length |
 | 7 | Item 3 blocked on an uncomputed effect size | **Discrimination** (decision form) — no magnitude computed |
 
-**16 of 16 caught. All six fields fire at least once.**
+**17 of 17 caught. All six fields fire at least once.**
+
+Instance 17 fires on **Quantities**. Nodes are estimated on all four paths and scored on pop
+(Alg 1:38), so "a refinement call carried `next_op == INDIVIDUAL`" is what the algorithm does
+on every node — it is not the event. **The aggravating detail: this was elevated to "the only
+finding that survives at paper-adjacent settings" before it was checked.** The elevation is
+what made it load-bearing; without it the bad measurement would have been a footnote.
 
 Instance 16 fires on **Quantities** (a stop-here bound compared against an extend-from-here
 maximum) with **Reference** as a second hit (which of the four frontier entries the ceiling

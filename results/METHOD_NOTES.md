@@ -4183,3 +4183,74 @@ expanded before an unsound prune fires"*. There is no established unsound prune.
 correlation on n = 2 with no mechanism**, and it must be stated that way wherever it appears.
 The inspection-only diagnostic built on it is correspondingly weakened: it predicts which
 units were vulnerable in our runs, without a reason.
+
+---
+
+# INSTANCE 17 — the K=50 "reproduction" measured a different event
+
+**The event** is: a formula flagged FINAL, **popped**, **never scored**, whose **exact IoU
+exceeded the incumbent** at that moment.
+
+**The test used** was: refinement calls carrying `next_op == "INDIVIDUAL"` — 445,644 of
+525,933, 84.7%.
+
+**That is normal behaviour.** `estimate_paths_iou` estimates every node on all four paths, and
+nodes are scored on pop (Alg 1:38). The 84.7% figure says only that most estimation happens on
+nodes whose INDIVIDUAL path is live. **It contains neither "never scored" nor "exceeded the
+incumbent."** Field = **Quantities**.
+
+**It was elevated to "the only finding that survives at paper-adjacent settings" before being
+checked.** That elevation is what made it load-bearing.
+
+## The measuring version — R1 fires at K = 15
+
+`src/exp_final_discard.py`. Counts formulas that were flagged FINAL, popped, never scored, and
+whose exact IoU exceeded the incumbent threshold at the moment of the pop.
+
+```
+K = 15, per-sentence, 27 pairs :  125 events, 23 of 27 pairs affected
+```
+
+Examples:
+
+```
+untrained a=0.05 unit396   IoU=0.07518796992481203 > incumbent=0.06860632183908046
+                           ((tag=IN OR lemma=.) AND (NOT const=VP))
+untrained a=0.05 unit413   IoU=0.08409250175192712 > incumbent=0.07840440165061899
+                           ((tag=IN OR dep=pobj) AND (NOT const=PP))
+```
+
+**So the event is not a single anecdote — it happens 125 times across 23 of 27 pairs at
+K = 15.** The K = 50 count is running.
+
+**Gate, reported rather than assumed:** the `estimate_iou_frontier` non-append counter fired
+468,645 times, so **nodes demonstrably can vanish before ever being popped.** A zero from this
+metric would therefore be uninterpretable. A non-zero is safe — it is a lower bound. (The
+counter itself is crude: it diffs input frontier length x4 against returned estimates and will
+overcount; it is used only as a yes/no on whether non-appends occur.)
+
+---
+
+# THE EVENT AND THE HARM ARE DIFFERENT THINGS — and the report conflated them
+
+**The event:** a final-flagged formula, popped, never scored, exact IoU above the incumbent.
+
+**The harm:** the search's returned answer ends up below a formula it discarded.
+
+**These coincide only at K = 15, and only on the two missing pairs:**
+
+```
+trained a=0.2 unit88, K=15
+   discarded         0.25454105110196174
+   incumbent then    0.25056904400606983
+   FINAL RETURNED    0.2522022213711222     <- below the discarded formula. HARM.
+```
+
+**At K = 50 there were 0/27 misses — the search returned the true in-grammar optimum on every
+pair.** So whatever discards occur there, **none of them cost anything, by construction.** An
+unevaluated formula is only harmful if nothing better is found later, and at K = 50 something
+better always was.
+
+**Section 1 of `UPSTREAM_REPORT.md` presented the event and borrowed the force of the harm.**
+That is corrected: the event may be widespread and configuration-free; **the harm is K = 15
+specific and is 2 pairs.**
