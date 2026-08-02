@@ -74,7 +74,7 @@ def main():
 
     for k, nb in zip(keys, neur):
         nn = int(nb.sum()); thr = [0.0]; popped_final = {}; scored = set(); cache = {}
-        scored_masks = set()
+        scored_masks = set(); npop = [0]
         def key(f):
             kk = rts.render(f, con)
             if kk not in cache: cache[kk] = kk
@@ -85,7 +85,7 @@ def main():
         def red(fr, t):
             thr[0] = max(thr[0], t); return ORED(fr, t)
         def pop(self, h):
-            it = OPOP(self, h)
+            it = OPOP(self, h); npop[0] += 1
             if it[1] == "INDIVIDUAL":
                 kk = key(it[2])
                 if kk not in popped_final:
@@ -136,7 +136,7 @@ def main():
         else:
             ret = r["iou"] if r.get("iou") == r.get("iou") else float("-inf")
         beat = [(lab, iou) for lab, iou, t in hits if iou > ret + 1e-12]
-        per_pair.append((k, len(popped_final), len(hits), hits, len(unfil), ret, beat))
+        per_pair.append((k, len(popped_final), len(hits), hits, len(unfil), ret, beat, npop[0]))
         total_hits += [(k,) + h for h in hits]
         if hits:
             print(f"  {k[0]} a={k[1]} {k[2]}: {len(hits)} of {len(popped_final)} popped-FINAL "
@@ -150,6 +150,15 @@ def main():
           f"{sum(1 for p in per_pair if p[2])} of {len(keys)} pairs")
     if n:
         print(f"  pairs with a filtered event: {sorted({h[0] for h in total_hits})}")
+    tot_pop = sum(p[7] for p in per_pair)
+    space = K * (3 * K) ** 2
+    print(f"\n  DENOMINATORS")
+    print(f"    total node pops across {len(keys)} pairs : {tot_pop:,}")
+    print(f"    events per node popped                 : {n/tot_pop:.3e}"
+          f"   ({n} / {tot_pop:,})")
+    print(f"    in-grammar space per pair K*(3K)^2     : {space:,}")
+    print(f"    events per enumerated formula          : {n/(space*len(keys)):.3e}"
+          f"   ({n} / {space*len(keys):,})")
     xb = [(p[0], p[5], p[6]) for p in per_pair if p[6]]
     print(f"\n  CROSS-CHECK: filtered events whose discarded IoU beats the FINAL RETURNED IoU")
     print(f"    pairs: {len(xb)}   events: {sum(len(p[2]) for p in xb)}")

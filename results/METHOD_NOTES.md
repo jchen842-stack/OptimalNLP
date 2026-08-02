@@ -4453,3 +4453,48 @@ quantity.
 
 What distinguishes the harmful two is unknown — the same "cause unknown" that closes the
 five-failed-candidates list.
+
+---
+
+# THE EVENT TABLE WITH DENOMINATORS — and the harm sentence is WRONG as written
+
+2026-08-02. Raw counts across searches of different sizes are not comparable: K = 50 explores
+37x the space of K = 15 and pops 5.7x as many nodes.
+
+```
+config       events      pops     per-pop      per-formula    MISSES
+flat K=15        45    37,096   1.213e-03       5.487e-05        2
+part K=15        76    49,599   1.532e-03       9.267e-05        0
+part K=50       191   209,964   9.097e-04       6.288e-06        0
+
+per-pop rate ascending      : part K=50  <  flat K=15  <  part K=15
+per-formula rate ascending  : part K=50  <  flat K=15  <  part K=15
+```
+
+Per-formula, K = 50 is **14.7x rarer** than K = 15 per-sentence while its raw count is 2.5x
+higher — the estimate that prompted this check, confirmed.
+
+## The sentence is corrected
+
+**Was:** *"the configuration with the FEWEST events is the only one with any harm."* True on
+raw counts, and **misleading on rates**.
+
+**Is:** **flat K = 15 sits in the MIDDLE on both normalised rates** — neither the highest nor
+the lowest — **and is the only configuration with harm.** The highest-rate configuration
+(part K = 15) has zero harm. The lowest-rate configuration (part K = 50) has zero harm.
+
+> **The event rate does not order the configurations by harm, on any normalisation tried:
+> raw count, per node popped, or per enumerated formula.** The single harmful configuration is
+> unremarkable on all three.
+
+## The remedy conclusion survives, with a changed reason
+
+**"Discard fewer formulas" is still not indicated**, but not because "the configuration that
+discards most is harmless" — that was the raw-count reading. The rate-based reason is stronger:
+**moving the rate in either direction lands on a configuration with zero harm.** Nothing in
+these three points suggests harm is a function of the rate at all, so a fix targeting the rate
+has no measured effect to target.
+
+**Recorded as a correction to my own line**, added to the report one commit earlier and wrong
+on the quantity that matters. It is the same shape as instance 15 — right mechanism, wrong
+dependent variable — this time caught before the report was sent rather than after.

@@ -41,10 +41,21 @@ estimated rather than evaluated. We have not established that this causes anythi
 it because a formula flagged final, whose exact IoU is computable in one operation and exceeds
 the incumbent, going unevaluated seems worth your attention regardless of consequence.
 
-**The event rate does not predict harm.** Per-sentence K=15 has 76 such discards and 0 misses;
-per-sentence K=50 has 191 and 0; flat K=15 has 45 and 2. **The configuration with the fewest
-discards is the only one where any of them cost anything.** This also means "discard fewer
-formulas" is not an indicated remedy — the configurations that discard most lose nothing.
+**The event rate does not predict harm, on any normalisation we tried.** Raw counts are not
+comparable across configurations (K=50 explores 37x the space and pops 5.7x as many nodes), so
+normalised:
+
+```
+config       events      pops     per-pop      per-formula    MISSES
+flat K=15        45    37,096   1.213e-03       5.487e-05        2
+part K=15        76    49,599   1.532e-03       9.267e-05        0
+part K=50       191   209,964   9.097e-04       6.288e-06        0
+```
+
+**The one configuration with harm sits in the middle on both rates** — neither highest nor
+lowest. Moving the rate in either direction lands on a configuration with zero harm. **We
+therefore do not suggest "discard fewer formulas" as a remedy**: nothing here indicates harm is
+a function of the discard rate.
 
 ## 2. Non-optimal returns at K = 15, which do NOT persist at K = 50
 

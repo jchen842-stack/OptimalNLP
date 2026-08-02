@@ -82,5 +82,16 @@ Usage:  python src/exp_final_discard.py <K> <flat|part>
   UNFILTERED (upper bound, known overcount): 245 events, 15 of 27 pairs
   FILTERED (mask never scored anywhere): 191 events, 12 of 27 pairs
   pairs with a filtered event: [('trained', '0.05', 'unit395'), ('trained', '0.05', 'unit412'), ('trained', '0.05', 'unit86'), ('trained', '0.05', 'unit87'), ('trained', '0.05', 'unit91'), ('trained', '0.1', 'unit413'), ('trained', '0.1', 'unit88'), ('trained', '0.2', 'unit413'), ('untrained', '0.05', 'unit510'), ('untrained', '0.05', 'unit88'), ('untrained', '0.05', 'unit92'), ('untrained', '0.1', 'unit92')]
+
+  DENOMINATORS
+    total node pops across 27 pairs : 209,964
+    events per node popped                 : 9.097e-04   (191 / 209,964)
+    in-grammar space per pair K*(3K)^2     : 1,125,000
+    events per enumerated formula          : 6.288e-06   (191 / 30,375,000)
+
+  CROSS-CHECK: filtered events whose discarded IoU beats the FINAL RETURNED IoU
+    pairs: 0   events: 0
+    expected exactly [('trained', '0.05', 'unit86'), ('trained', '0.2', 'unit88')]
+    -> DISAGREES with the oracle: [('trained', '0.05', 'unit86'), ('trained', '0.2', 'unit88')]
   silent non-appends observed at estimate_iou_frontier: 9319201 (gate: nodes CAN vanish pre-pop, so a zero would need this to be 0)
   -> S1   (R1/R2 on the filtered count: R1)
