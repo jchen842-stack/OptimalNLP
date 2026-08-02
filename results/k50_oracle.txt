@@ -34,3 +34,7 @@ length-3 per pair. Intersections via float32 GEMM against all 27 neurons at once
     level-3 0/7500  (1s)
     level-3 1500/7500  (26s)
     level-3 3000/7500  (50s)
+    level-3 4500/7500  (76s)
+    level-3 6000/7500  (98s)
+  exhaustive optimum done (122s)
+

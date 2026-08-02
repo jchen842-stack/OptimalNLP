@@ -4010,3 +4010,90 @@ K = 1168 `Bott^A_1 = 0`. The draft is **wrong as written**.
 
 It stays untouched until items 2, 2b, 3 and 5 have answers. Item 3 is answered; 2, 2b and 5
 are not. **Anything arising outside the closing list goes to D7.**
+
+---
+
+# RETRACTION — the inadmissibility demonstration was a CATEGORY ERROR
+
+2026-08-02. Item 3's pre-filter log settles it, and the answer is not the one the elimination
+argument pointed at.
+
+## The four path estimates at node P, pre-filter
+
+```
+trained a=0.2 unit88     IoU(P) = 0.23267674991206472   true reachable from P = 0.25454105110196174
+    INDIVIDUAL  0.23267674991206472
+    OR          0.5360534646500176   <- MAX
+    AND         0.4175506268081003
+    NOT         0.40520673813169983
+
+trained a=0.05 unit86    IoU(P) = 0.11240400279264604   true reachable from P = 0.21660649819494585
+    INDIVIDUAL  0
+    OR          0.20339771933907377
+    AND         0.546485260770975    <- MAX
+    NOT         0.45609065155807366
+```
+
+**Every extension path bounds the true reachable value from above.** AND is 0.4176 against a
+reachable 0.2545 on unit88, and 0.5465 against 0.2166 on unit86. **`and_chain_estimation:509`
+is exonerated. So are `or_chain_estimation:368` and `and_not_chain_estimation:581`. No chain
+estimate is inadmissible on either pair.**
+
+## What the "inadmissible ceiling" actually was
+
+`estimate_paths_iou` emits **four separate frontier entries per node** — one per path. That is
+why the event log showed **four CREATED events at t=10** for P.
+
+The entry dropped at t=206 with ceiling `0.23267674991206472` is the **INDIVIDUAL-path entry**,
+and that number is exactly `IoU(P)`. The INDIVIDUAL path means *stop here*, so its correct
+bound **is** `IoU(P)`. Dropping it when the threshold reached `0.23293365307753797` is
+**correct behaviour**.
+
+The OR, AND and NOT entries — the ones that bound *extending* P — were never dropped. They
+survived and were expanded at t=231, t=348 and t=366.
+
+**The comparison `ceiling 0.232677 < true_max(P) 0.254541` compared the bound for "stop at P"
+against the best value reachable by "extend P". Those are different quantities.** It is a
+category error, and it is mine.
+
+## What this retracts
+
+**Retracted:** that the aggregated bound was demonstrated inadmissible on this data. It was
+not. The demonstration compared a stop-here bound against an extend-from-here reachable set.
+
+**Also retracted, pending recomputation:** every exposure figure built on that comparison —
+`6/27` and `5/27` inadmissible ceilings, and the set-based `14/27` and `13/27`. All were
+computed by taking a node's key at drop time and comparing it to `true_max(P)` over the whole
+subtree. If those drops were INDIVIDUAL-path entries, they are correct drops and the counts
+are meaningless.
+
+**Not retracted:**
+- **The 2/27 misses.** Measured by exhaustive enumeration against what the search returned.
+  Independent of any bound argument.
+- **The unevaluated-FINAL observation.** A complete formula, exact IoU
+  `0.25454105110196174`, exceeding the incumbent `0.25056904400606983` by
+  `0.003972007095891905`, carried through an estimation path and never evaluated. Independent.
+- **B1.** The precondition holds at K >= 50. Counting only.
+- **The K = 8 non-compliance record.** Counting only.
+
+## Consequence for `UPSTREAM_REPORT.md`
+
+Claim (a) as written — *"the aggregated bound is inadmissible when `Bott_1(E^C)_x != 0`"* — has
+**no surviving demonstration**. The `Bott_1` violation is real in our configuration and the
+estimator's admissibility is *conditioned* on it, but **we have not shown a single inadmissible
+estimate.** The report cannot assert (a) and must not be sent.
+
+What survives for upstream is the lead observation and the 2/27, with the cause unidentified.
+
+## The error shape, recorded
+
+**Elimination pointed at `and_chain_estimation:509` and elimination was wrong**, because the
+enumeration of candidates was itself incomplete: it never included "the dropped entry is a
+different path of the same node". Two entries carrying the same label are not the same node in
+any sense that matters to a bound.
+
+Both prior framings were mine, and both were built on a quantity I had not decomposed. The
+instruction to log the three chain estimates *before* hand-computing anything is what caught
+it — the hand-computation would have compared Eq (50)/(51) against a function that was never
+implicated, matched, and been reported as "the estimator behaves as specified", which is true
+and would have concealed that the premise was wrong.
