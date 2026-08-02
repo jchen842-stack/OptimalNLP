@@ -3808,3 +3808,77 @@ upstream equality implementation.
 ids after GC — verified, non-deterministic, and the actual cause of a measured artifact
 (`never CREATED` 1/3 → 0/0). **Key by evaluated mask or canonical string. The `id()` half of
 the rule is the whole rule.**
+
+---
+
+# B1 CONFIRMED — the E.2.2 violation is OUR CONFIGURATION, not the domain
+
+2026-08-02. Counting only, no search. Same corpus (M = 24,199, 2,000 sentences), same masks,
+per-sentence partition, neuron `trained a=0.2 unit88`.
+
+```
+     K  concepts  common%   sentences with Bott_1 == 0    min  median  max
+    15        15     83.8%                       83.5%      0       0    1
+    50        50     96.6%                      100.0%      0       0    0
+   100       100     99.3%                      100.0%      0       0    0
+  1168      1168    100.0%                      100.0%      0       0    0
+
+K = 1168 : per-concept dataset-wide E^C totals  min 0  median 10  max 13,698
+           concepts with dataset-wide total 0    24 of 1,168
+           Bott^A_1(E^C) = 0
+```
+
+**B1 holds. B2 does not.** At the full `min_support >= 5` vocabulary — the paper's own
+vocabulary scale — `Bott_1(E^C)_x = 0` on **every sentence**, and the aggregated
+`Bott^A_1(E^C) = 0` as well. The precondition is satisfied at paper scale.
+
+It is already satisfied at **K = 50**.
+
+**Mechanism, and it is the obvious one once measured:** with a large vocabulary most concepts
+are absent from any given sentence, so some concept contributes zero extras-in-common and the
+minimum is 0. **24 of 1,168 concepts have a dataset-wide total of zero.** Top-K on
+high-support features removes exactly the concepts that would have supplied the zero.
+
+## What this does to the finding
+
+**The E.2.2 violation is a property of our configuration, not of text.** Two contributions,
+now separable:
+
+```
+single-sample partition   dominant  : Bott_1 = 859, 0% compliant       (our reshape(1, M))
+top-K = 15 selection      residual  : 16.5% of sentences non-compliant at K = 15
+paper-scale K = 1168      NONE      : 100% compliant on every sentence
+```
+
+The earlier framing — *"on a token-level corpus with min_support + top-K selection we measure
+`Bott_1 = 859` on 100% of samples"* — presented the violation as a domain characteristic. **It
+is not.** It is what our `K = 15` and our single sample produce. At the paper's own vocabulary
+scale and its own sample definition, the condition holds everywhere we can measure it.
+
+## The limit, recorded either way — precondition testable at paper scale, consequence not
+
+`Bott_1` is measurable at K = 1168 because it is **counting**. The 2/27 misses are **not**
+verifiable there: an exhaustive in-grammar oracle at K = 1168 is `K * (3K)^2 = 1168 * 3504^2`
+~ **1.4e10 formulas per unit**, times 27 units.
+
+So: **the precondition can be tested at paper scale; the consequence cannot.** We can say the
+condition holds at K = 1168. We cannot say whether the search is optimal there, and nothing
+here licenses extrapolating the 2/27 either way.
+
+This asymmetry is itself worth reporting — it is the reason the finding cannot simply be
+re-run at paper scale to settle it.
+
+## Consequence for `UPSTREAM_REPORT.md` — claim (a) is demoted
+
+Claim (a) was *"the aggregated bound is inadmissible when `Bott_1(E^C)_x != 0`"*, supported by
+`Bott_1 = 859` on 100% of samples. The **inadmissibility demonstration stands** — the ceiling
+0.232677 against a reachable 0.254541 is a measured fact about the estimator given a violating
+input.
+
+**What no longer stands is the implication that the violating input is what a text corpus
+looks like.** It is what K = 15 on a single sample looks like. The report must say that, and
+must say that at K >= 50 with per-sentence samples we cannot produce a violation at all.
+
+That materially weakens the report as a criticism of the method and strengthens it as a
+statement about a precondition that is easy to violate by configuration — which is a different
+paper, and a fairer one.

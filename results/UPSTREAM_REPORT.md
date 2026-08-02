@@ -34,8 +34,23 @@ instrumentation record of a complete formula being estimated rather than compute
 
 Admissibility of the aggregated form requires `Bott_1(E^C)_x = 0`. Section E.2.2 describes the
 violating case as *"a rare degenerate case (not observed in any of the datasets tested in this
-paper)"*. Measured on this corpus: **`Bott_1(E^C)_x = 859`, on 100% of samples**, with 83.8% of
-tokens (20,280 / 24,199) covered by more than one concept.
+paper)"*. In **our configuration** we measure `Bott_1(E^C)_x = 859` on 100% of samples.
+
+**We must be clear that this is our configuration and not a property of text.** Counting
+`Bott_1` per sentence across vocabulary sizes on the same corpus:
+
+```
+K = 15   (ours)   83.5% of sentences compliant, max Bott_1 = 1
+K = 50            100% compliant
+K = 100           100% compliant
+K = 1168 (full min_support >= 5 vocabulary)   100% compliant, Bott^A_1 = 0
+```
+
+**At the paper's own vocabulary scale the precondition holds on every sentence**, because most
+concepts are absent from most sentences and supply the zero — 24 of 1,168 concepts have a
+dataset-wide total of zero. Top-K selection on high-support features removes exactly those.
+The violation we hit is produced by our `K = 15` and, dominantly, by our single-sample
+partition.
 
 A worked instance, on the prefix `P = (dep=ROOT OR dep=nsubj)`:
 
@@ -44,7 +59,14 @@ ceiling assigned to P     0.232677
 best IoU reachable from P 0.254541     <- the bound is BELOW what its own subtree reaches
 ```
 
-The bound is not an upper bound. This is measured and stands on its own.
+The bound is not an upper bound **given a violating input**. That the estimator is
+inadmissible under a violated precondition is measured and stands. **We do not claim the
+precondition is violated at realistic vocabulary scale — we measure that it is not.**
+
+One limit worth stating: `Bott_1` is measurable at K = 1168 because it is counting, but the
+consequence is not testable there — an exhaustive in-grammar oracle at K = 1168 is ~1.4e10
+formulas per unit. **The precondition can be checked at paper scale; whether the search is
+optimal there cannot**, and we do not extrapolate our 2/27 to it.
 
 **It is also partition-invariant.** `SUM_x |I^C_max(L)_x|` counts over all `(x, j)`; `Top^A_t`
 and `Bott^A_1` are concept-wise over dataset-wide totals. Repartitioning our data from one
