@@ -3882,3 +3882,131 @@ must say that at K >= 50 with per-sentence samples we cannot produce a violation
 That materially weakens the report as a criticism of the method and strengthens it as a
 statement about a precondition that is easy to violate by configuration — which is a different
 paper, and a fairer one.
+
+---
+
+# D6 closing — registrations, a retracted run, and two records
+
+2026-08-02.
+
+## The K=50 oracle: FIRST RUN RETRACTED — float32 precision artifact
+
+The first K=50 run reported **14 of 27 misses, including both K=15 known misses**, and would
+have been reported as **K1 firing**. **It is retracted before reporting.**
+
+**Every one of the 14 had a gap of `+0.0000%`:**
+
+```
+returned 0.26220362622036264   "optimum" 0.2622036337852478   difference 7.5e-09
+float32 epsilon 1.19e-07
+```
+
+The oracle computed intersections by **float32 GEMM**. Counts up to 24,199 are not exactly
+representable in float32, so the GEMM result lands a few ULPs *above* the true integer count,
+and the `> 1e-12` test flagged every pair. The search returns float64 computed from integer
+counts. **The oracle was less precise than the thing it was auditing.**
+
+Re-run in **float64**, where counts <= 24,199 are exactly representable, with the test at
+`1e-9`. Nothing from the first run is reported.
+
+This is the same class as the rounded-`exact_IoU` error that produced 17/27 instead of 2/27,
+and the `nan`-as-success error: **a reference computed to lower precision than the measurement
+it judges.**
+
+## Registered before the K=50 result lands — THE CONFOUND
+
+**K = 50 changes two things at once.** The precondition holds there (B1), **and** the search
+space is **37x larger** (1,125,000 vs 30,375 formulas). **K1/K2 as registered cannot separate
+them.** If the misses vanish, either the restored precondition or the different space could
+explain it, and this run cannot say which.
+
+Recorded before the number exists so the ambiguity is not discovered after seeing it.
+
+## Registered — 2b, the matched-K de-confounding run
+
+Oracle at **K = 15 with a different 15 concepts**, chosen so `Bott^A_1 = 0` — including at
+least one concept with zero dataset-wide common extras. **Same space size (30,375), same cost.
+Only the precondition differs.**
+
+```
+D1  misses vanish   -> the precondition is the driver
+D2  misses persist  -> K itself is, and the precondition story is incidental to them
+```
+
+The chosen vocabulary is to be reported explicitly so the selection is auditable.
+
+## Item 3 — hook coverage audit: already done, restated
+
+Committed at `90ef8be`. All seven insertion/pop sites covered (`:98 :427 :490 :494` heapify /
+heappush, `:674` heappop, `:704 :735` re-pushes); all six `reduce_frontier` call sites covered.
+**Two removal classes UNCOVERED:** the silent non-append at `estimate_iou_frontier:389` when a
+path estimate is `<= 0`, and six `continue` statements (`:679 :709 :747 :753 :804 :871`) after
+which a popped node is gone with no event. The `reduce_frontier` exclusion in
+`UPSTREAM_REPORT.md` is already requalified to *"no DROPPED event under hooks covering sites
+:408 :485 :743 :794 :828 :866"*.
+
+## Item 5 prerequisite — the transcription discrepancy is RESOLVED, and the target moves
+
+The hypothesis was right. `optimal_utils.py:477-521` (`compute_max_iou_from_label_info`) is
+reached from `estimate_min_max_iou_from_label_info`, which `path_heuristic.estimate_paths_iou`
+calls at `:389-396` to score the **INDIVIDUAL path** — the final-path label dIoU, Eq 3 / Def
+3.5. **It is not the aggregated path heuristic.**
+
+The aggregated **path** quantities live in `compositional/optimal_sum_heuristic.py`:
+
+```
+:10   estimate_disjoint_label_info
+:148  estimate_label_info
+:368  or_chain_estimation
+:509  and_chain_estimation
+:581  and_not_chain_estimation
+```
+
+**And this relocates the target.** On unit88 the ceiling that got the prefix dropped was
+`0.23267674991206472`, which **equals `IoU(P)` exactly** — the INDIVIDUAL-path value. So the
+node's key was its own dIoU, meaning **the AND-chain path estimated LOWER than the true
+AND-reachable 0.254541**. The suspect function is **`and_chain_estimation` at
+`optimal_sum_heuristic.py:509`**, not `optimal_utils.py:477-521`.
+
+Eq (50)/(51) are to be hand-computed against **that** function's output. Nothing is computed
+yet, and no verdict is recorded.
+
+---
+
+# RECORD against item 1's length ladder — K = 8 is the most non-compliant configuration measured
+
+```
+K       sentences with Bott_1 == 0     max Bott_1     Bott^A_1
+ 8            35.4 - 40.1%                  8         2,665 - 2,920
+15            62.4 - 75.9%                  1         1,202 - 1,576
+50                   100%                   0                 0
+```
+
+(units = the length-ladder set, trained a=0.1, 88/92/396/413/510)
+
+**The length ladder ran at K = 8**, where roughly 38% of sentences satisfy the precondition —
+the worst configuration in this project. An under-computed ceiling **prunes more than a sound
+bound is entitled to**, and that cuts item 1's two conclusions in opposite directions. Both
+belong with the results:
+
+**COST CONCLUSION — STRENGTHENS.** Length 5 failed to terminate on 2 of 5 units *while pruning
+more than it was entitled to*. A sound search explores strictly more and is slower still. The
+"length 5 does not terminate" finding is a lower bound on the difficulty.
+
+**GAIN CONCLUSION — WEAKENS, and the caveat is load-bearing.** The measured gains
+(+0.000% / +0.055% / +0.921% IoU from length 4 to 5) are **lower bounds**. An over-pruning
+search finds worse optima, and the length-5 space offers more opportunities to over-prune than
+length 4 — so the difference is biased downward. **"Length 5 buys nothing" is exactly what an
+over-pruning search manufactures.** At 38% precondition compliance the bias is not a remote
+possibility, and the conclusion should not be quoted without this attached.
+
+---
+
+# `UPSTREAM_REPORT.md` — DO NOT SEND, and why
+
+The current draft asserts a precondition violation as a property of token data. **B1 refuted
+that**: at K >= 50 with per-sentence samples the condition holds on every sentence, and at
+K = 1168 `Bott^A_1 = 0`. The draft is **wrong as written**.
+
+It stays untouched until items 2, 2b, 3 and 5 have answers. Item 3 is answered; 2, 2b and 5
+are not. **Anything arising outside the closing list goes to D7.**

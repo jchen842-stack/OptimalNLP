@@ -1,0 +1,36 @@
+K=50 exhaustive oracle, per-sentence partition, length 3, all 27 pairs.
+
+WHY THIS RUN DECIDES THE FINDING. B1 showed the E.2.2 precondition holds on every sentence at
+K >= 50, so K = 50 is a regime the paper's assumptions cover. If the 2 misses persist there,
+they are not caused by the Bott_1 violation.
+
+PRE-REGISTERED, before running:
+
+  K1  the 2 misses PERSIST at K = 50 (per-sentence)
+      -> not caused by the Bott_1 violation. The finding is alive in a regime the paper's
+         assumptions cover, and the mechanism hunt (M1/M2/M3) matters.
+
+  K2  the misses VANISH at K = 50
+      -> a K = 15 artifact. The report narrows to "the admissibility precondition is easy to
+         violate by vocabulary configuration and nothing checks it", the mechanism hunt is a
+         K = 15 artifact, and D6 closes without it.
+
+  SAME RUN, second question: does the unevaluated-FINAL-formula observation reproduce at
+  K = 50? It was observed at K = 15 and has NOT been shown to be configuration-free. Counted
+  as refinement calls carrying next_op == "INDIVIDUAL".
+
+  CHECKLIST. Quantities: per-pair boolean miss, both sides; IoU in float64. Membership: all 27
+  pairs, per-sentence partition, stated. Reference: the K=50 exhaustive optimum, computed here,
+  not reused from K=15. Discrimination: K1 and K2 are exhaustive and mutually exclusive.
+  Power: n=27, 2 prior events; descriptive. Sentinels: timeouts and no-label returns bucketed
+  separately, never folded into "no miss".
+
+Enumeration: bottom-up, sharing length-2 sub-masks. 50 leaves -> 7,500 length-2 -> 1,125,000
+length-3 per pair. Intersections via float32 GEMM against all 27 neurons at once.
+
+[k50] 24199 tokens, K=50, 27 pairs, per-sentence grid 2000x53
+
+  level-2 masks: 7,500  (1s)
+    level-3 0/7500  (1s)
+    level-3 1500/7500  (26s)
+    level-3 3000/7500  (50s)

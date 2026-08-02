@@ -57,7 +57,10 @@ def main():
     for arm, alpha, units in PAIRS:
         z = np.load(os.path.join(REPO, "results", f"acts2k_{arm}_a{alpha}.npz"))
         for u in units: keys.append((arm, alpha, f"unit{u}")); neur.append(z["acts"][u].astype(bool))
-    Nf = np.array(neur, dtype=np.float32)                 # (27, M)
+    # float64, NOT float32. Counts are <= 24,199 and exactly representable in float64; in
+    # float32 the GEMM result lands a few ULPs above the true integer count, which made all
+    # 27 pairs look like misses with a +0.0000% gap. Precision artifact, not a finding.
+    Nf = np.array(neur, dtype=np.float64)                 # (27, M)
     nsz = Nf.sum(1)
     print(f"[k50] {M} tokens, K={Kc}, {len(keys)} pairs, per-sentence grid {N_}x{L_}\n", flush=True)
 
@@ -67,10 +70,11 @@ def main():
     best = np.zeros(len(neur), dtype=np.float64)
 
     def upd(chunk):                                       # chunk: (B, M) bool
-        cf = chunk.astype(np.float32)
+        cf = chunk.astype(np.float64)
         inter = Nf @ cf.T                                 # (27, B)
         msz = cf.sum(1)                                   # (B,)
         iou = inter / np.maximum(msz[None, :] + nsz[:, None] - inter, 1.0)
+        np.round(iou, 12, out=iou)
         np.maximum(best, iou.max(1), out=best)
 
     lvl2 = []
@@ -118,7 +122,7 @@ def main():
         if r["halted"] != "no" or r["iou"] != r["iou"]:
             sent.append(k); print(f"  {k[0]+' a='+k[1]+' '+k[2]:>27} {'SENTINEL':>12} {b:>12.6f}        {r['halted']}")
             continue
-        m = b - r["iou"] > 1e-12
+        m = b - r["iou"] > 1e-9        # float64 GEMM on exact integer counts
         if m: miss.append((k, r["iou"], b))
         print(f"  {k[0]+' a='+k[1]+' '+k[2]:>27} {r['iou']:>12.6f} {b:>12.6f} {100*(b/r['iou']-1):>7.4f}%"
               f"  {'MISS' if m else 'ok'}{'  <- known at K=15' if k in KNOWN else ''}")
