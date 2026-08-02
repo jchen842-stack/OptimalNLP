@@ -3581,3 +3581,103 @@ flat drop margins               0.00025690  and  0.00033742
 **The closest per-sentence survivor cleared the threshold by less than one of the flat losses
 failed by.** `0/27` is not a safety margin. It is one favourable pop-ordering away from being
 `1/27`, and the distance is measured, not inferred.
+
+---
+
+# D6 (continued) — REGISTRATION REVERSAL, logged as a reversal
+
+2026-08-02. This is **D6, not D7.** The mechanism question is the unfinished half of D6's own
+question — *is the optimality guarantee sound* — so it belongs here. D7 remains the length-4
+oracle, the fork-only rerun at `optimal_utils.py:271`, D/E/F, and queue items 3/4/5.
+
+**The reversal, stated as one:**
+
+```
+registered   W2 fires -> "mechanism UNIDENTIFIED, nothing written, goes to D7"
+outcome      W2 fired (refined estimates 0.4176 and 0.5465, both admissible)
+action taken deferral REVERSED, same day
+grounds      instrumentation had narrowed the exit paths from five to two
+```
+
+**This is a reversal of a registered outcome, and it is recorded as one rather than
+relabelled as new work.** The registration was honoured at the moment it fired — the deferral
+was written, committed, and reported — and then overturned on new information about tractability,
+not on a new preference about the answer.
+
+**The stop condition is unchanged, and it is M3.** M3 is not a deliverable boundary; it is a
+halt: if neither enumerated exit fires, that is the result, and **no further hooks are added
+until something fires.** The distinction matters because the previous deferral was a boundary
+and this one is a halt, and only the second survives being close to an answer.
+
+**`UPSTREAM_REPORT.md` still requires its own registration before anything from this enters it.**
+
+---
+
+# D6 item 0 — READ BEFORE INSTRUMENTING. Source, verbatim.
+
+Pinned SHA `70805299`, `compositional/optimal.py`.
+
+## Exit A — distributive/equivalence re-push
+
+```
+:712   transformed_label = apply_distributive_property(node)
+:713   if transformed_label != label_node:            <- guards the whole block
+:732       if new_max < -e_node:                      <- trigger for re-push + continue
+:733           if new_max >= minimum_threshold:       <- inner guard on the re-push
+:734-737          heapq.heappush(current_frontier,
+                      (-new_max, next_op_node, label_node, node[3], "sample"))
+:740           if new_min > minimum_threshold:        <- threshold raise + reduce_frontier
+:746-747       done = len(current_frontier) == 0 ; continue
+```
+
+Note the re-push at `:734-737` re-inserts **`label_node`**, the *original* label — not
+`transformed_label`. The transform is used only to compute a tighter estimate.
+
+## Exit B — `recent_nodes` memory skip
+
+```
+:750   if -e_node >= recent_e_iou:
+:751       if node in recent_nodes:
+:752-753       done = len(current_frontier) == 0 ; continue
+:755       else: recent_nodes.append(node)
+:757-758   else: recent_nodes = [node] ; recent_e_iou = -e_node
+```
+
+## How "Node in Memory" tests membership — and the candidate defect is REFUTED
+
+`recent_nodes` is a **list**, so `node in recent_nodes` is a linear scan using `==` on the
+whole 5-tuple `(e_iou, next_op, label, paths_to_expand, heuristic)`. Element `[2]` dispatches
+to `F.Or.__eq__` / `F.And.__eq__`.
+
+**Those are explicitly commutativity-aware** (`formula.py:266`, `:343`): the mono-operator case
+sorts `get_vals()`, and the general case tests `left==other.left and right==other.right` **or**
+`left==other.right and right==other.left`. `compute_hash_value` (`formula.py:28-48`) sorts
+flattened operands for AND and OR by design.
+
+Tested directly rather than read:
+
+```
+Or : x==y True   hash(x)==hash(y) True   contract OK   y in {x} True   y in [x] True
+And: x==y True   hash(x)==hash(y) True   contract OK   y in {x} True   y in [x] True
+```
+
+**No `F.Or(a,b)` vs `F.Or(b,a)` defect exists in upstream. The hash/eq contract holds.** The
+membership test is sound on the formula element. It is *not* a candidate defect and is not
+reported as one.
+
+### Correction to my own standing rule
+
+The standing rule *"never key on object identity"* cited two instances, the first being
+*"`F.Or(a,b)` vs `F.Or(b,a)` — structurally equal, distinct objects — deterministic, visible"*.
+**That attribution is wrong and is withdrawn.** Upstream's equality and hash both handle
+commutativity correctly, as just tested.
+
+The failure that attribution described was real — an early exposure audit reported *"P* never
+entered the frontier"* on all 27 pairs using `n[2] == _P`, where a later mask-based test found
+events. But **the cause of that failure is unestablished.** The most likely explanation is that
+`_P` was one arbitrary optimal prefix while the node carried a *different* formula with the
+same mask — which is instance 8, the under-specified subject, not an equality defect. **I am
+not asserting that either.** What is established: commutativity is not the cause, and the
+second instance (`cache[id(f)]`) stands unaffected.
+
+The standing rule itself survives on the `id()` instance alone, and is narrowed to that.
