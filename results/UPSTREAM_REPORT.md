@@ -111,3 +111,32 @@ does not become less relevant for longer formulas.
 - The 2/27 rate is **not** a failure rate for the method. Among the 9 pairs whose optimum has a
   single construction path it is **2/9**; among the other 18 it is **0/18**.
 - One corpus, one model, one concept vocabulary. We have not tested the vision datasets.
+
+---
+
+## Observation, explicitly NOT a claim — the |D|x cost model did not hold here
+
+Section C's cost model implies sample computation is on the order of `|D|x` more arithmetic per
+estimate than the aggregated form. We measured the opposite:
+
+```
+matched median wall clock, length 4 :  flat (|D| = 1)  639.4s  ->  per-sentence (|D| = 2000)  247.2s
+                                                                    0.39x -- 2.6x FASTER
+matched median nodes expanded       :  8,340 -> 8,553  (1.03x, unchanged)
+```
+
+**One hypothesis, untested:** the `|D|x` factor may fall on cheap per-sample **scalars**, while
+the expensive **mask** operations span the same 24,199 bits under either partition — so
+partitioning multiplies the cheap term and leaves the dominant term untouched. If that is
+right, Section C's model assumes many samples with small per-sample masks, which is a
+**vision-shaped assumption** sitting alongside the `Bott_1(E^C)_x = 0` condition in E.2.2.
+
+We have not tested this and do not claim it. We report the measurement because it is the
+opposite of what the model predicts, and because if the explanation is right it would mean two
+of the method's assumptions are shaped by the vision setting rather than stated as
+preconditions.
+
+Related, and better established: peak frontier rose 1.19-1.39x under the corrected partition
+while **distinct nodes expanded stayed flat** (1.03x). The cause is refinement churn —
+Algorithm 1 line-18 re-insertions rose **8.6x** (median 72 -> 622 per unit). The search is not
+larger; it re-queues the same nodes more often.

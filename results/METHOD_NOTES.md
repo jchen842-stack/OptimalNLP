@@ -3248,3 +3248,73 @@ verdict about D5.0 that the data contradicts.
 The Discrimination field asks *what input would change the answer*. It was satisfied for P5's
 own verdict and **not** for the consequence hung off it. **A consequence attached to a
 disjunction needs its own Discrimination check, one per disjunct.**
+
+---
+
+# REFINEMENT CHURN — the frontier grew from re-insertions, not from search-space growth
+
+2026-08-02. Length 3, both partitions, all 27 pairs. Counting Algorithm 1 line-18
+re-insertions directly: `heappush` calls carrying `heuristic == "sample"`, the re-insert at
+`optimal.py:704-707` that follows a refined estimate.
+
+```
+                        flat (1 sample)     per-sentence (2,000)
+re-insertions, total          2,753                 18,776         6.8x
+re-insertions, median            72                    622         8.6x
+peak frontier, median           962                  1,143        1.19x
+distinct nodes expanded         477                    474        0.99x
+pairs with ZERO re-insertions   1/27                   0/27
+```
+
+**Confirmed, and it settles the 1.39x / 1.03x split.** Refinement re-insertions rise **8.6x**
+under the partition while distinct nodes expanded is unchanged. The frontier holds more nodes
+because **the same nodes are re-inserted more often after refinement**, not because more
+formulas are being explored.
+
+**Restated finding, and the previous wording is withdrawn:**
+
+> **Peak frontier grew from refinement churn. Distinct nodes expanded were unchanged (1.03x at
+> length 4, 0.99x at length 3).** The partition did not make the search bigger; it made the
+> same search re-queue its nodes more.
+
+The earlier phrasing — *"the partition ENLARGED the frontier"*, *"22-39% larger"* — implies a
+larger search. **It is not.** The B1 band verdict stands as a statement about peak frontier,
+which is what B1 was registered on, but the interpretation attached to it was wrong and is
+corrected here.
+
+## This falsifies A3, which was registered and used
+
+A3 stated: *"with |D| = 1, aggregated and sample computation are identical, so Algorithm 1's
+refine-on-pop step (lines 14-21) was a no-op for the entire flat series."*
+
+**False. The flat run performed 2,753 refinement re-insertions**, with a median of 72 per pair
+and only **1 of 27** pairs at zero. Refinement was never disabled at |D| = 1 — it was **8.6x
+less frequent**, which is a different claim.
+
+The prediction that motivated this measurement said *"flat ~ 0"*. The **direction and ratio
+are strongly confirmed; the magnitude is not.** Recording both, because a confirmed mechanism
+with a wrong magnitude is how an over-strong claim gets built on a real effect.
+
+**What this does NOT change:** P3's recovery was already re-attributed to **pop ordering**, on
+the independent evidence that both miss-prefix ceilings are byte-identical and both prefixes
+are still dropped. That attribution never rested on A3. What A3 supplied was the phrase *"a
+disabled component turned back on"*, which is now wrong — the component was always on.
+
+## D6 instance 15 — mine, field = Quantities
+
+**P7's rationale argued about pruning; P7 was registered against peak frontier.**
+
+The rationale reasoned that the aggregated estimate is partition-invariant and that
+`reduce_frontier` prunes on it at insertion — which governs **which nodes are explored**, i.e.
+**nodes expanded**. That quantity behaved exactly as the rationale predicted: **1.03x at length
+4, 0.99x at length 3 — near-invariant.** The rationale was *right*.
+
+It was registered against **peak frontier**, which additionally counts re-insertions of nodes
+already explored, and that moved 1.19-1.39x. **Right mechanism, wrong dependent variable.**
+
+P7 would have been SUPPORTED on the quantity its own rationale described.
+
+**Recorded with the aggravating detail:** this was committed while writing a registration whose
+entire purpose was to prevent that class of error, in a file that by then contained thirteen
+logged instances of it. Having the checklist did not make me apply it to the thing I was
+writing at the time.

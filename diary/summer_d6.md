@@ -36,6 +36,7 @@ verdict rather than an error.
 | 3 | **Expanded-count vs formula-space** | `K*(3K)^(L-1)` formula-space ratios (24.0x, 12.4x) | measured **wall-clock** ratios (83.2x, 36.6x) | the P1 "cancellation" finding, withdrawn |
 | 4 | **`nan` sentinel** | `true - x > tol` | `x` was `nan` / `None` / no-solution | 12 no-label runs scored as successes; 10 comparison sites still unguarded |
 | 5 | **Treatment-dependent median membership** | all-27 median | timed-out peaks are truncated, and membership moves with the treatment | corrected to a matched set before the L4 run (A1) |
+| 15 | **P7 registered against the wrong dependent variable** (assistant) | rationale: pruning -> nodes **expanded** (1.03x, near-invariant as predicted) | registered on **peak frontier** (1.39x), which also counts re-insertions | measuring refinement churn to explain the 1.39x/1.03x split |
 | 14 | **One diary consequence hung off a disjunction** | P5 = (a) OR (b), consequence "D5.0 superseded" | (a) and (b) fired in **opposite directions**; the scorer emitted a verdict the data contradicts | L4 landed and the frontier had *grown* while timeouts fell |
 | 13 | **"optima biased toward protected signatures"** (assistant) | 47.4% observed | 66.7% space share; Wilson CI on 9/19 is [27.3%, 68.3%] and **contains** it | computed when instance 12 forced a power check one level up. **Parent of instance 12.** |
 | 12 | **P9 registered without checking it could fire** | bands separated by 9.0 points | SE 9.7 points at n=26; n~236 needed for 80% power | computed when the baseline correction forced a re-registration |
@@ -137,7 +138,13 @@ Discrimination is what makes a Power failure invisible.
 | 6 | Depth-3 reference under a depth-4 search | **Reference** — enumeration depth did not match search length |
 | 7 | Item 3 blocked on an uncomputed effect size | **Discrimination** (decision form) — no magnitude computed |
 
-**14 of 14 caught. All six fields fire at least once.**
+**15 of 15 caught. All six fields fire at least once.**
+
+Instance 15 fires on **Quantities**: right mechanism, wrong dependent variable. P7 would have
+been SUPPORTED on the quantity its own rationale described. It was committed while writing a
+registration whose purpose was to prevent that error, in a file already holding thirteen
+logged instances of it — **having the checklist did not make me apply it to what I was
+writing at the time.**
 
 Instance 14 fires on **Discrimination**: the field was satisfied for P5's own verdict but
 never applied to the *consequence* hung off it. A consequence attached to a disjunction needs
