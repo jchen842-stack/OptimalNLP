@@ -2910,3 +2910,57 @@ than smoothing:
 with the disagreement visible because "which field fires" is itself a claim, and forcing it to
 one field would have hidden that the checklist caught this redundantly — which is mildly
 stronger evidence than a single hit.
+
+---
+
+# TWO CORRECTIONS TO THE LENGTH-4 REPORTING
+
+## 1. Membership fires on the flat one-sided result too
+
+The flat length-4 statement is not "no large in-grammar loss". It is:
+
+> **No large in-grammar loss AMONG THE 23 PAIRS THAT TERMINATED.** Four pairs are excluded as
+> timeouts — trained a=0.1 unit510, trained a=0.05 unit87, untrained a=0.05 unit396, untrained
+> a=0.05 unit510 — **and those are precisely the pairs where the search struggled most.**
+
+**Two checklist fields fire on that result, not one:**
+
+- **Power** — median margin 2.469%; a 0.93%-scale loss is caught on only 5 of 23.
+- **Membership** — the 23 are the pairs that terminated, a set selected by the same difficulty
+  that would make a loss more likely. The excluded four are not missing at random.
+
+Both must be attached wherever the 0/23 figure appears.
+
+## 2. P9's baseline mismatch REMOVED, not stated
+
+The 47% baseline was computed over length-3 **optima**; P9 now scores **returned** formulas.
+Rather than caveat the mismatch, the baseline is recomputed on the same subject. Returned
+equals optimal on 25 of 27 pairs, so the recomputation is exact and can differ on at most two.
+
+```
+RETURNED length-3 formulas, signature counts:
+   ANDNOT+OR     10      ANDNOT+ANDNOT  9      AND+OR   2      OR+ANDNOT  2
+   AND+AND        1      ANDNOT+AND     1      OR+OR    1      (2-leaf)   1
+
+two-operator returned formulas : 26/27
+mixed (n_prefixes = 1)         : 15/26 = 57.7%      <- P9's baseline
+```
+
+**The like-for-like baseline is 57.7%, not 47.4%** — a 10-point difference, and material to
+P9's bands. The optima-based 47.4% and the signature-space 66.7% are retained **as reference
+points only**, not as the comparison.
+
+The gap between 47.4% and 57.7% is itself informative: the optima figure excluded the 8
+multi-signature pairs from its denominator, while a returned formula is always a single
+formula with a single signature. Same corpus, same runs, two defensible denominators, ten
+points apart — a Membership effect in miniature.
+
+**P9 restated a second time:**
+
+```
+P9  mixed (single-prefix) share of RETURNED length-4 formulas, against 57.7% returned-L3:
+      ~57.7%  -> vulnerability is length-invariant
+      rising  -> the bug concentrates with length
+      falling -> longer formulas buy redundancy
+    Reference points, not the comparison: 47.4% (L3 optima), 66.7% (signature space).
+```
