@@ -4498,3 +4498,102 @@ has no measured effect to target.
 **Recorded as a correction to my own line**, added to the report one commit earlier and wrong
 on the quantity that matters. It is the same shape as instance 15 — right mechanism, wrong
 dependent variable — this time caught before the report was sent rather than after.
+
+---
+
+# D6 CLOSES — the exit path is identified. 45 of 45 at `optimal.py:747`.
+
+2026-08-02. `src/exp_exit_paths.py`. Logging-only build of `optimal.py`, generated at run
+time in a temp directory and never written into the tree.
+
+## Four guards, all passed
+
+```
+G1  generated in /var/folders/.../optlog_*  -- never in the tree.
+    verify/run_all.sh re-run afterwards: 11/11, check 3 (patch no-op vs clean 7080529) PASSES.
+G2  git diff --no-index --numstat:   5   0   (5 added, 0 deleted)
+    every added line matches `_EXIT_LOG(...)`. Insertion-only proved mechanically.
+G3  patched vs unpatched on all 27 pairs: identical returned IoU, identical pop counts,
+    identical expanded counts. Traversal unchanged, not merely the answer.
+G4  assertion rule enforced in the script: any upstream AssertionError reports and HALTS.
+    None was tripped.
+```
+
+**A correction found while instrumenting:** there are **five** node-exit `continue` sites, not
+six. `:804` is a `for ancestor` loop continue at indent 28 inside the propagation block — it
+skips an ancestor, not the node — and is excluded. The earlier "six continue statements" count
+was wrong.
+
+## The distribution
+
+```
+filtered events traced : 45   (matches the independently-measured 45 exactly)
+
+  distributive_discard  (:747)   45   100.0%
+  incumbent_skip        (:679)    0
+  refinement_discard    (:709)    0
+  recent_nodes_memory   (:753)    0
+  loop_tail             (:871)    0
+
+M3: share exiting with NO logged path = 0.0%   (0/45)
+```
+
+**Every one of the 45 exits at the same site.** M3 does not fire. `recent_nodes` — the leading
+candidate through most of this section — accounts for **zero**.
+
+## The mechanism, read from source
+
+```
+:712   transformed_label = apply_distributive_property(node)
+:713   if transformed_label != label_node:
+:718       node_after_distr = (node[0], node[1], transformed_label, node[3])
+:719       new_max, new_min = path_heuristic.update_paths_iou(node=node_after_distr, ...)
+:732       if new_max < -e_node:
+:733           if new_max >= minimum_threshold:
+:734-737          heapq.heappush(..., label_node, ...)     <- re-pushes the ORIGINAL
+:746-747       done = ... ; continue                        <- otherwise DISCARDED
+```
+
+**The estimate is computed on the TRANSFORMED label (`node_after_distr`, `:718-719`). The node
+that is discarded is the ORIGINAL (`label_node`).** When `new_max` falls below
+`minimum_threshold`, the `:733` guard fails, no re-push happens, and the original node is
+dropped at `:747`.
+
+So: **a complete, final-flagged formula, whose own exact IoU exceeds the incumbent, is
+discarded on the strength of an estimate computed for a different formula** — its
+distributive transform.
+
+This also explains why M2's prediction failed. M2 said Exit A would appear as a **second
+CREATED**, because `:734-737` re-pushes. It does — **but only when `new_max >= minimum_threshold`.**
+These 45 events are exactly the cases where that guard fails, so the re-push never happens and
+there is no second CREATED. The absence I read as "points at Exit B" was in fact the signature
+of Exit A's failure branch.
+
+## What is established, and what is not
+
+**Established:** all 45 filtered flat K=15 events exit at `:747`; the guards rule out the
+instrumentation having changed the search; the 45 matches the independent count exactly.
+
+**NOT established:** that this is a defect. `apply_distributive_property` is presumably
+intended to find an equivalent form with a tighter bound, and discarding on it may be sound if
+the transform is equivalence-preserving and the estimate is admissible for the original. **We
+have not tested either.** The two facts that sit uncomfortably together are that the estimate
+is computed on one formula and applied to another, and that on 2 of 27 pairs the discarded
+formula beat the final answer. **Whether the first causes the second is not shown**, and after
+five failed causal attributions in this section it is not being asserted.
+
+---
+
+# REMEDY CONCLUSION — strengthened by the rate correction
+
+Recorded as instructed, because the correction improved the conclusion rather than weakening
+it.
+
+**Moving the event rate in either direction lands on a zero-harm configuration.** The highest
+rate measured (part K=15, 1.532e-03/pop) has 0 misses; the lowest (part K=50, 9.097e-04/pop)
+has 0 misses; the only configuration with harm sits between them. **A rate-targeting fix has
+nothing measured to target.**
+
+The raw-count version of this sentence — "the configuration that discards most is harmless" —
+was true but weaker, and would have supported "discard less" as a plausible direction. The
+normalised version rules it out.
