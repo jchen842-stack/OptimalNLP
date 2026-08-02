@@ -1,34 +1,34 @@
-# Message — rewritten from the report, NOT patched. NOT SENT.
+# Message — final rewrite from the report. NOT SENT.
 
-Subject: A final-flagged formula discarded unevaluated in `optimal.py`
+Subject: `optimal.py:747` discards a final node on an estimate below its own IoU
 
 ---
 
 Hello — we've been applying `optimal-compositional-explanations` (@ `70805299`) to token-level
-concepts on SNLI and instrumenting the search. One observation seems worth your time on its
-own. On one unit, the formula `((dep=ROOT OR dep=nsubj) AND const=NP)` is flagged final
-(`next_op == "INDIVIDUAL"`), has an exact IoU of `0.25454105110196174`, and exceeds the
-incumbent threshold of `0.25056904400606983` by `0.003972007095891905` — and it is popped,
-carried through an estimation path, and never evaluated. Its exact IoU was one mask operation
-away, and computing it would have made it the new incumbent. This is not a bound problem: we
-logged all four path estimates for its parent pre-filter and every one bounds the true
-reachable value from above. It also reproduces at K = 50, where 445,644 of 525,933 refinement
-calls carried `next_op == "INDIVIDUAL"`.
+concepts on SNLI, and instrumenting the search turned up something we think is worth your time.
+At `optimal.py:712-747`, `apply_distributive_property` rewrites a node's label, the rewritten
+form is re-estimated, and if that estimate falls below the incumbent threshold the node is
+neither re-pushed nor scored — it is dropped at `:747`. The estimate is computed on the
+transformed label; the node discarded is the original. We traced every qualifying discard in a
+run and all 45 exit at that one site.
 
-Separately, at K = 15 we find the search misses its own in-grammar optimum on 2 of 27
-(unit, alpha) pairs, by +0.93% and +4.74% IoU, verified by enumerating all 30,375 in-grammar
-length-3 formulas — your `beam_optimal.py` finds both. **This does not persist at K = 50**: the
-same exhaustive enumeration over 1,125,000 formulas per pair gives 0 misses out of 27. So it is
-specific to our small-vocabulary configuration, and we cannot separate the two things K = 50
-changes at once (a 37x larger space, and the E.2.2 precondition holding there but not at
-K = 15). We should say plainly that we first wrote to you attributing these misses to an
-inadmissible aggregated bound, and we have **retracted that**: the comparison behind it put a
-stop-here bound against an extend-from-here maximum, and we have since tested five candidate
-explanations — the disjoint fork, bound inadmissibility, `reduce_frontier`, the refinement
-discard, and all three chain estimators — and all five failed. We do not know the cause.
+The part that concerns us is that these are FINAL nodes (`next_op == "INDIVIDUAL"`). A final
+node has nothing left to extend, so its reachable maximum is just its own exact IoU — and on
+41 of the 45 the estimate is below that value, several of them exactly `0.0` for formulas whose
+actual IoU is 0.24–0.25. In one case the discarded formula had IoU `0.25454105110196174`
+against an incumbent of `0.25056904400606983`, so scoring it would have made it the new best.
+This holds whether or not the distributive transform preserves equivalence: if it does, the
+estimate under-bounds its own formula; if it does not, an estimate for one formula was used to
+discard another.
 
-We are not asking you to act on the second item; it may well be a property of our
-configuration and it disappears at a realistic vocabulary size. The first one we do think
-stands on its own, and we would value your read on whether a final-flagged formula reaching
-the estimation path rather than the evaluation path is intended. We have not tested the vision
-datasets and make no claim about them. Happy to share code, event logs, or run anything useful.
+Usually this costs nothing — something better is found by another route, and 14 of the 16
+affected pairs still return the true in-grammar optimum. On 2 of 27 pairs at our K = 15 setting
+nothing better was found and the discarded formula beat the returned answer, by +0.93% and
++4.74% IoU, confirmed by exhaustive enumeration of all 30,375 in-grammar length-3 formulas. We
+are **not** claiming the discard caused those two; it is the only surviving candidate after we
+tested and eliminated five others, and we should say plainly that we twice proposed a cause and
+were wrong both times, most recently by comparing a stop-here bound against an
+extend-from-here maximum. The discard event itself occurs at every configuration we measured,
+including K = 50 where no miss occurs at all, so the event and the harm are not the same thing.
+Happy to share code, the event logs, or run anything useful — and we have not tested the vision
+datasets, so we make no claim about them.
