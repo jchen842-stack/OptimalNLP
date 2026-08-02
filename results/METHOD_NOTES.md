@@ -3681,3 +3681,130 @@ not asserting that either.** What is established: commutativity is not the cause
 second instance (`cache[id(f)]`) stands unaffected.
 
 The standing rule itself survives on the `id()` instance alone, and is narrowed to that.
+
+---
+
+# D6 item 1 — HOOK COVERAGE AUDIT. Two uncovered classes found.
+
+Pinned SHA, `compositional/optimal.py`. Hooks in place: CREATED
+(`HeapProbe.heappush` + `HeapProbe.heapify`), POPPED (`HeapProbe.heappop`),
+DROPPED (wrapper on `optimal.reduce_frontier`), SCORED
+(`mask_utils.get_formula_mask_and_tree`).
+
+## Frontier-insertion and pop sites — all covered
+
+```
+site   enclosing function              op         covered by
+:98    update_frontier_by_ancestors    heapify    CREATED
+:427   reduce_frontier                 heapify    CREATED (re-heapify of survivors)
+:490   update_frontier                 heappush   CREATED
+:494   update_frontier                 heapify    CREATED
+:674   perform_search                  heappop    POPPED
+:704   perform_search (refine re-push) heappush   CREATED
+:735   perform_search (distributive)   heappush   CREATED
+```
+
+`optimal.heapq` is replaced by the `HeapProbe` instance, so every `heapq.*` call inside the
+module dispatches to a hooked method. **No insertion or pop site is uncovered.**
+
+## Removal sites — TWO CLASSES UNCOVERED
+
+```
+reduce_frontier filtering   :408 :485 :743 :794 :828 :866   COVERED (all 6 call sites)
+
+UNCOVERED 1 -- silent non-append during estimation
+  :389   `if node_path_max_iou > 0:` in estimate_iou_frontier
+         A path whose estimate is <= 0 is never appended to frontier_estimates. It is
+         removed with NO heapq call and NO reduce_frontier call. Invisible to every hook.
+
+UNCOVERED 2 -- popped-then-continued
+  :679 :709 :747 :753 :804 :871
+         Six `continue` statements in perform_search. A node popped at :674 and reaching any
+         of these is gone unless separately re-pushed. POPPED fires; nothing distinguishes
+         "popped and processed" from "popped and discarded", and nothing says WHICH continue.
+```
+
+**The audit's own answer to the question that prompted it:** the two exits under investigation
+(`:747` distributive, `:753` memory) are both in UNCOVERED class 2. That is precisely why they
+cannot be separated from the existing log, and precisely what M1/M2/M3 will hook.
+
+## Consequence — the three exclusions are requalified
+
+The exclusions in `UPSTREAM_REPORT.md` rest on **absence of events**, and absence is evidence
+only under complete coverage. Coverage is not complete. Restated in the honest form:
+
+```
+was      "reduce_frontier threshold prune EXCLUDED -- no DROPPED event"
+is now   "no DROPPED event under hooks covering all six reduce_frontier call sites
+          (:408 :485 :743 :794 :828 :866)"
+```
+
+The `:697` and `:699-709` exclusions are **unaffected** — they rest on positive measurements
+(ceiling 0.4176 > threshold 0.2506; refined 0.4176 above both threshold and the IoU it bounds),
+not on absence.
+
+---
+
+# M2 RESTATED — Exit A is not a discard
+
+`:734-737` re-pushes **`label_node`**, the original label, not `transformed_label`. So Exit A
+returns the node to the frontier with a lowered estimate. **It would appear as a SECOND
+CREATED, not as a disappearance.**
+
+The existing log for the optimal child is:
+
+```
+t=348  CREATED   ceiling=0.4175506268081003
+t=349  POPPED    ceiling=0.4175506268081003
+       (nothing after)
+```
+
+**No second CREATED. Conditional on hook completeness — which the audit above now bounds — that
+already points at Exit B.** The run confirms or refutes it; the audit is what the inference
+rests on, and the audit says insertion coverage is complete while `continue`-discard coverage
+is not. So a missing second CREATED is meaningful, and a silent exit is not attributable
+without the new hooks.
+
+---
+
+# OPEN ITEM — the early "0/27" via `n[2] == _P`, cause unestablished
+
+Promoted from a parenthetical to an open item, because it was used as the basis of a standing
+rule and its cause has never been established.
+
+**Observed:** an early exposure audit compared frontier nodes to one enumerated optimal prefix
+with `n[2] == _P` and reported *"P* never entered the frontier"* on **all 27 pairs**. A later
+mask-keyed test found events on 26 of 27.
+
+**Excluded:** commutativity. `Or.__eq__`/`And.__eq__` and `compute_hash_value` are
+commutativity-aware, verified by direct test — `==`, hash equality, and both set and list
+membership all hold for `Or(a,b)` vs `Or(b,a)`.
+
+**Not established:** why the comparison failed. The leading candidate is instance 8 — `_P` was
+one arbitrary member of a 1-3 element optimal-prefix set while nodes carried other members —
+but that has not been tested and is not asserted.
+
+**Status: OPEN.** It is not load-bearing for any current claim; the exposure figures were all
+recomputed mask-keyed.
+
+---
+
+# The standing rule propagated an unverified diagnosis — mine
+
+Recorded as its own failure, distinct from the numbered instances and from
+assert-from-intent.
+
+The rule *"never key on object identity"* was written from **two** cited instances. The first,
+`F.Or(a,b)` vs `F.Or(b,a)`, was **a diagnosis I never verified** — I inferred it from a symptom
+(0/27 matches) and generalised it into a rule in the same commit, without running the
+three-line equality test that refutes it.
+
+**The shape: a diagnosis was promoted to a general rule before the diagnosis itself was
+checked.** It is worse than a wrong diagnosis, because a rule outlives the case that produced
+it and carries its error into unrelated work. This one would have had me avoid a correct
+upstream equality implementation.
+
+**The narrowed form is correct and stands:** `cache[id(f)]` is unsound because CPython reuses
+ids after GC — verified, non-deterministic, and the actual cause of a measured artifact
+(`never CREATED` 1/3 → 0/0). **Key by evaluated mask or canonical string. The `id()` half of
+the rule is the whole rule.**

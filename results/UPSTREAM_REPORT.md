@@ -91,11 +91,19 @@ link between them.
 For the child formula on both losing pairs:
 
 ```
-reduce_frontier threshold prune   EXCLUDED   no DROPPED event on the formula
+reduce_frontier threshold prune   no DROPPED event under hooks covering all six
+                                  reduce_frontier call sites (:408 :485 :743 :794 :828 :866)
 the :697 incumbent skip           EXCLUDED   ceiling 0.4175506268081003 > threshold 0.25056904400606983
 the :699-709 refinement discard   EXCLUDED   refined 0.4175506268081003 is above the threshold
                                              AND above the exact IoU it bounds -- admissible
 ```
+
+**On the first line: absence of an event is evidence only under complete hook coverage, and our
+coverage is not complete.** Two removal classes are unhooked — a silent non-append at
+`estimate_iou_frontier:389` when a path estimate is `<= 0`, and six `continue` statements in
+`perform_search` (`:679 :709 :747 :753 :804 :871`) after which a popped node is gone with no
+event. The `:697` and `:699-709` exclusions are unaffected: they rest on positive
+measurements, not on absence.
 
 **Two paths remain un-excluded**, stated as remaining and not as suspects:
 
