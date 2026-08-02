@@ -48,7 +48,8 @@ def build(src_path, tmpdir):
         raw = lines[ln - 1]
         assert raw.strip() == "continue", f":{ln} is {raw.strip()!r}, not 'continue'"
         indent = raw[:len(raw) - len(raw.lstrip())]
-        lines.insert(ln - 1, f'{indent}_EXIT_LOG(node, "{SITES[ln]}")')
+        extra = (", new_max, minimum_threshold, best_results[0]" if ln == 747 else "")
+        lines.insert(ln - 1, f'{indent}_EXIT_LOG(node, "{SITES[ln]}"{extra})')
     out = os.path.join(tmpdir, "optimal_logged.py")
     open(out, "w").write("\n".join(lines))
     d = subprocess.run(["git", "diff", "--no-index", "--numstat", src_path, out],
@@ -116,10 +117,10 @@ def main():
 
     print("\n  exit-path distribution over filtered events")
     from collections import Counter
-    dist = Counter(); nolog = 0; total = 0
+    dist = Counter(); nolog = 0; total = 0; E_ROWS = []
     OGFM = MU.get_formula_mask_and_tree
     for k, nb in zip(keys, neur):
-        nn = int(nb.sum()); thr = [0.0]; popped = {}; smask = set(); exits = {}
+        nn = int(nb.sum()); thr = [0.0]; popped = {}; smask = set(); exits = {}; detail = {}
         ORED = mod.reduce_frontier
         def red(fr, t):
             thr[0] = max(thr[0], t); return ORED(fr, t)
@@ -137,8 +138,15 @@ def main():
                     m = rts.eval_formula(it[2], dense)
                     popped[kk] = (int((m & nb).sum()) / max(int((m | nb).sum()), 1), thr[0], m.tobytes())
             return it
-        def elog(node, tag):
-            try: exits.setdefault(rts.render(node[2], con), []).append(tag)
+        def elog(node, tag, new_max=None, min_thr=None, incumbent=None):
+            try:
+                lab = rts.render(node[2], con)
+                exits.setdefault(lab, []).append(tag)
+                if tag == "distributive_discard":
+                    m = rts.eval_formula(node[2], dense)
+                    ex = int((m & nb).sum()) / max(int((m | nb).sum()), 1)
+                    detail.setdefault(lab, []).append((new_max, min_thr, ex, incumbent,
+                                                       node[1]))
             except Exception: pass
         mod.reduce_frontier = red; MU.get_formula_mask_and_tree = gfm; sos.HeapProbe.heappop = pop
         try:
@@ -153,9 +161,32 @@ def main():
             if iou > t + 1e-12 and mb not in smask:
                 total += 1
                 tags = exits.get(lab)
-                if tags: dist[tags[-1]] += 1
+                if tags:
+                    dist[tags[-1]] += 1
+                    if tags[-1] == "distributive_discard" and lab in detail:
+                        E_ROWS.append(detail[lab][-1])
                 else: dist["NO_LOGGED_PATH"] += 1; nolog += 1
     print(f"\n  filtered events traced: {total}")
+    print(f"\n  E1/E2 -- at :747, new_max (transformed estimate) vs the ORIGINAL formula's exact IoU")
+    print(f"    {'new_max':>12} {'min_thresh':>12} {'exact_iou':>12} {'incumbent':>12} {'final?':>7}")
+    under = ge = 0; chain = {"thr<=inc": 0, "thr>inc": 0}
+    for row in E_ROWS:
+        nm, mt, ex, inc, nop = row
+        if nm is None or ex is None: continue
+        (under := under) ; 
+        if nm < ex - 1e-15: under += 1
+        else: ge += 1
+        if mt is not None and inc is not None:
+            chain["thr<=inc" if mt <= inc + 1e-15 else "thr>inc"] += 1
+    for row in E_ROWS[:8]:
+        nm, mt, ex, inc, nop = row
+        print(f"    {nm!r:>12} {mt!r:>12} {ex:>12.9f} {inc!r:>12} {str(nop=='INDIVIDUAL'):>7}")
+    print(f"\n    new_max <  exact_iou : {under} of {under+ge}")
+    print(f"    new_max >= exact_iou : {ge} of {under+ge}")
+    print(f"    -> {'E1' if under > (under+ge)/2 else 'E2'}")
+    print(f"\n    ordering of minimum_threshold vs incumbent (hypothesis, not required by the test):")
+    print(f"      threshold <= incumbent : {chain['thr<=inc']}")
+    print(f"      threshold >  incumbent : {chain['thr>inc']}")
     for tag, c in dist.most_common():
         print(f"    {tag:<22} {c:>4}  ({100*c/total:.1f}%)")
     print(f"\n  M3: share exiting with NO logged path = {100*nolog/total:.1f}%  ({nolog}/{total})")

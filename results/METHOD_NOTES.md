@@ -4597,3 +4597,85 @@ nothing measured to target.**
 The raw-count version of this sentence — "the configuration that discards most is harmless" —
 was true but weaker, and would have supported "discard less" as a plausible direction. The
 normalised version rules it out.
+
+---
+
+# E1 ESTABLISHED — the estimate under-bounds a FINAL node's own value
+
+2026-08-02. Same four guards: build generated outside the tree (verify still 11/11, check 3
+passes), numstat `5 0` insertion-only, determinism gate identical on IoU / pops / expanded,
+assertion rule in-script and never tripped.
+
+At `optimal.py:747`, for each of the 45 filtered flat K = 15 events:
+
+```
+      new_max    minimum_threshold    exact_iou (ORIGINAL)   incumbent            FINAL?
+          0.0   0.23293365307753797         0.240215366     0.23293365307753797    True
+          0.0   0.25056904400606983         0.254541051     0.25056904400606983    True   <- unit88
+          0.0   0.12466358057917967         0.125174300     0.12466358057917967    True
+          0.0   0.12466358057917967         0.124895222     0.12466358057917967    True
+   0.16014669...  0.1453263274336283         0.129822531     0.1453263274336283    True
+   ...
+
+new_max <  exact_iou :  41 of 45
+new_max >= exact_iou :   4 of 45
+->  E1
+```
+
+**Every one of the 45 is a FINAL node** (`next_op == "INDIVIDUAL"`). **A final node has nothing
+left to extend, so its reachable maximum IS its exact IoU.** An estimate below that is an
+under-estimate of the node's own value, and 41 of 45 are.
+
+**Several are exactly `0.0`** for formulas whose actual IoU is 0.24 to 0.25. The second row is
+the unit88 miss: estimate `0.0`, threshold `0.25056904400606983`, actual `0.25454105110196174`.
+The formula that would have become the new incumbent was discarded on an estimate of zero.
+
+**E1's reasoning does not depend on the transform preserving equivalence**, which is why it is
+the right test:
+
+- **If the transform preserves equivalence**, both forms share that exact IoU, and the estimate
+  under-bounds its own formula.
+- **If it does not**, an estimate computed for one formula was used to discard another.
+
+Either way the discard is not justified by the number it was made on. **Defect established
+from data**, not from a reading of intent — which is what the previous five attributions
+lacked.
+
+The remaining **4 of 45** have `new_max >= exact_iou`: admissible estimates that still fell
+below the threshold. Those discards are sound on their own terms.
+
+## The threshold/incumbent ordering — hypothesis REFUTED as a universal
+
+Reported because it was asserted and unverified, and the test above does not depend on it.
+
+```
+minimum_threshold <= incumbent :  24 of 45
+minimum_threshold >  incumbent :  21 of 45
+```
+
+**They do not chain.** The threshold exceeds the incumbent on 21 of 45 events. In the sampled
+rows the two are equal, so the split is not a large divergence — but "they chain" is false as
+stated, and nothing in E1 rests on it.
+
+---
+
+# D6 — CLOSED
+
+**The finding, in one sentence:** at `optimal.py:747` the search discards a complete,
+final-flagged formula on the strength of an estimate computed for its distributive transform,
+and on 41 of 45 observed events that estimate is **below the discarded formula's own exact
+IoU** — sometimes zero against an actual 0.25.
+
+**Consequence, measured:** usually harmless — something better is found by another route, so 14
+of 16 affected flat pairs and all 17 affected per-sentence pairs still return the true
+in-grammar optimum. **On 2 of 27 flat K = 15 pairs nothing better was found**, and the
+discarded formula beat the returned answer by +0.9274% and +4.7434%.
+
+**Scope:** the discard event occurs at every configuration measured, including K = 50 where the
+E.2.2 precondition holds and no miss occurs (191 events, 12 of 27 pairs). **The harm is K = 15
+flat specific.** The event rate does not order configurations by harm on any normalisation.
+
+**Not claimed:** that the event causes the misses. It is the only surviving candidate after
+five failed attributions, the exit path is measured at 45/45, and the estimate is measurably
+unsound on a final node — but the causal step from "unsound estimate discarded this formula"
+to "this is why the run's answer was worse" is one the data supports and does not compel.
