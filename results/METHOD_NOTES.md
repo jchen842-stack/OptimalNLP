@@ -2819,3 +2819,94 @@ D/E/F and items 3/4/5 are measurements *using* the method, downstream of whether
 The one item that could change D6 is **P9** — if the mixed share of length-4 optima rises
 toward 67%, the exposure claim strengthens with length rather than holding constant. P9 is
 computable from the L4 optima alone and stays **in D6**.
+
+---
+
+# POWER OF THE ONE-SIDED CHECK — 0/23 is genuine for large misses, weak for small
+
+The C2 check fires only when `R_L4 < true_L3`. Its detection threshold per pair is the
+**margin** `m = (R_L4 - true_L3) / R_L4`: a length-4 loss is invisible unless it exceeds `m`.
+
+```
+n = 23 scoreable pairs (4 timeouts excluded)
+margin m :  min 0.101%    median 2.469%    max 11.709%
+```
+
+Against the two observed length-3 miss magnitudes:
+
+```
+pairs where m > 4.74% (would miss the LARGER known magnitude) :  7/23
+pairs where m > 0.93% (would miss the SMALLER known magnitude): 18/23
+```
+
+**Verdict, stratified rather than pooled, because pooling hides the split:**
+
+- **A 4.74%-scale loss would be caught on 16 of 23 pairs.** Against losses of that magnitude,
+  **0 DEFINITE MISS is a genuine result.** The median margin of 2.47% is "a few percent", the
+  condition registered in advance for calling it genuine.
+- **A 0.93%-scale loss would be caught on only 5 of 23.** Against small losses the check is
+  **near-blind**, and 0/23 carries almost no information.
+
+The two known magnitudes straddle the median margin, so the honest statement is: **the flat
+length-4 run has no large in-grammar loss, and the check cannot speak to small ones.** It must
+not be reported as "no misses at length 4".
+
+The same computation is applied to `partition_L4.csv` on arrival, through the same predicate.
+
+---
+
+# P9 — SUBJECT CORRECTED. As registered it was circular.
+
+P9 was registered to score "the mixed share of length-4 **optima**". **The run does not
+produce optima.** It produces *returned formulas*, and whether returned equals optimum is the
+open question the whole section is about. Scoring a vulnerability measure on a quantity whose
+correctness is what the vulnerability determines is circular.
+
+**Restated:**
+
+```
+P9  the mixed (single-prefix) share of RETURNED length-4 formulas,
+    reported against BOTH baselines:
+        47%  observed length-3 OPTIMA (9 of 19 two-operator formulas)
+        67%  signature space (18 of 27)
+```
+
+**The bias, named explicitly rather than caveated:** the pairs where returned != optimum are
+**exactly the mixed-signature vulnerable ones** — that is the finding this measure rests on. So
+the measurement is **least reliable precisely where it matters**. Worse, the direction of the
+bias is **unknown**: it depends on the signature of whatever was returned *instead* of the
+optimum, which nothing here measures. A lost mixed-signature optimum could be replaced by a
+returned formula that is itself mixed (bias -> 0), or repeated-operator (bias downward,
+understating vulnerability), and there is no reason to expect either.
+
+**Status:** the returned-formula version stays in **D6 as suggestive, not as a verdict.** The
+true-optima version **requires the length-4 oracle** (1,366,875 formulas x 27 pairs) and is
+therefore a **D7 item**. This is the one place the D6/D7 boundary drawn above moves: P9 was
+listed as staying in D6, and only its weakened form does.
+
+The comparison against the 47% baseline inherits the same defect from the other side — 47% was
+computed on length-3 **optima**, verified by enumeration. Comparing returned-L4 against
+optimal-L3 is not like-for-like, and the figure is reported with both denominators and that
+mismatch stated.
+
+---
+
+## D6 instance 11 — the P9 subject substitution
+
+**Field: Quantities, primarily — with Reference as a second, independent hit.**
+
+My read differs slightly from "Reference alone", and the difference is worth recording rather
+than smoothing:
+
+- **Quantities** — *what is on each side, are they the same kind of thing?* The named subject
+  was `optima`; the scored subject was `returned formulas`. These are different kinds, and the
+  substitution is the whole error. This is the primary hit.
+- **Reference** — *does the reference's configuration match the run being scored?* The 47%
+  baseline was computed on length-3 **optima**. Even after restating P9 on returned formulas,
+  comparing returned-L4 against optimal-L3 remains a configuration mismatch. This fires
+  independently of the first.
+
+**No seventh field is needed.** The instance is caught, twice, by existing fields. Recorded
+with the disagreement visible because "which field fires" is itself a claim, and forcing it to
+one field would have hidden that the checklist caught this redundantly — which is mildly
+stronger evidence than a single hit.
