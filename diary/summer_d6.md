@@ -36,6 +36,7 @@ verdict rather than an error.
 | 3 | **Expanded-count vs formula-space** | `K*(3K)^(L-1)` formula-space ratios (24.0x, 12.4x) | measured **wall-clock** ratios (83.2x, 36.6x) | the P1 "cancellation" finding, withdrawn |
 | 4 | **`nan` sentinel** | `true - x > tol` | `x` was `nan` / `None` / no-solution | 12 no-label runs scored as successes; 10 comparison sites still unguarded |
 | 5 | **Treatment-dependent median membership** | all-27 median | timed-out peaks are truncated, and membership moves with the treatment | corrected to a matched set before the L4 run (A1) |
+| 18 | **E1'/E1''/E1''' unscoreable as framed** (assistant) | a binary split between two `return 0.0` sites | **nine** zero sources combined through `max()`, so no observation separates the outcomes | reading `update_paths_iou` before instrumenting the split |
 | 17 | **"Reproduces at K=50" measured a different event** (assistant) | the event: FINAL, popped, **never scored**, exact IoU **above the incumbent** | the test: refinement calls carrying `next_op == INDIVIDUAL` (84.7%) — normal behaviour, containing neither condition | challenged on review, before the measuring version existed |
 | 16 | **Ceiling compared against the wrong quantity** (assistant) | assigned ceiling of the dropped entry | `true_max(P)` over *extensions*, while the dropped entry was the **INDIVIDUAL (stop-here)** path | logging all four path estimates pre-filter, as instructed, before hand-computing anything |
 | 15 | **P7 registered against the wrong dependent variable** (assistant) | rationale: pruning -> nodes **expanded** (1.03x, near-invariant as predicted) | registered on **peak frontier** (1.39x), which also counts re-insertions | measuring refinement churn to explain the 1.39x/1.03x split |
@@ -140,7 +141,17 @@ Discrimination is what makes a Power failure invisible.
 | 6 | Depth-3 reference under a depth-4 search | **Reference** — enumeration depth did not match search length |
 | 7 | Item 3 blocked on an uncomputed effect size | **Discrimination** (decision form) — no magnitude computed |
 
-**17 of 17 caught. All six fields fire at least once.**
+**18 of 18 caught. All six fields fire at least once.**
+
+Instance 18 fires on **Discrimination**: the registered outcomes were not distinguishable by
+any observation, and that should have been checked before registering rather than discovered
+by reading the source afterwards. It is wrong about the **structure** of the question, not its
+answer — a distinct failure from the seventeen before it, and it was written into a
+registration, which is where such errors are hardest to catch.
+
+Logged alongside it: **the threshold/incumbent chaining claim**, asserted from three sampled
+rows and false on **21 of 45**. Same session, same habit — a relation read off a sample and
+stated as a property.
 
 Instance 17 fires on **Quantities**. Nodes are estimated on all four paths and scored on pop
 (Alg 1:38), so "a refinement call carried `next_op == INDIVIDUAL`" is what the algorithm does
@@ -282,3 +293,47 @@ The question is **no longer "which bound was wrong"** — all four bounds are cl
 Same candidates (`recent_nodes` dedup `:749-757`, the distributive path `:731-767`), better-posed
 question. **The two uncovered removal classes still gate M1/M2/M3**, and until they are hooked
 M3 cannot separate "the control-flow model is wrong" from "it left through an unwatched site".
+
+---
+
+## WHY D6 STOPS HERE — six failures with one shape
+
+The per-path source trace was declined, and the reason is not fatigue.
+
+**It can locate but it cannot indict.** `:50`'s zeroing is documented behaviour — the
+`update_paths_iou` docstring states that a max IoU below the threshold is set to zero. The
+`:217-:304` defaults are not-applicable markers for paths that do not exist on that node.
+**No single one of the nine sites is a defect on its own terms**, so a trace that says "this
+event's zero came mostly from `:246`" answers *where* without answering *whether*.
+
+**Six attributions have failed, and all six failed the same way: the behaviour was as
+specified.**
+
+```
+1  the disjoint fork                       falsified -- forcing are_disjoint False changed nothing
+2  aggregated-bound inadmissibility        retracted -- category error, stop-here vs extend-from-here
+3  reduce_frontier threshold prune         excluded  -- no DROPPED event
+4  the :699-709 refinement discard         excluded  -- refined estimate admissible
+5  all three chain estimators              exonerated -- every extension path bounds from above
+6  the :747 estimate under-bounding        void      -- new_max == 0.0 is a sentinel
+```
+
+**That is a pattern, not six coincidences.** Each time the search did what it was written to
+do, and each time the gap between "as specified" and "returns the optimum" stayed unexplained.
+A seventh round on the same question is precisely what this log exists to prevent.
+
+**What D6 delivers:** the discard event, measured across every configuration; its exit path,
+45 of 45 at `optimal.py:747`; the 2/27 harm at K = 15 flat, agreed by two independent
+instruments; and eighteen logged measurement defects with the comparison-preconditions
+checklist they produced. **The cause of the 2/27 is unknown, and is recorded as unknown.**
+
+## D7, first item — queued, not run
+
+**Is `minimum_threshold` a valid lower bound?** Compare the maximum threshold reached per pair
+against that pair's true in-grammar optimum. **If the threshold ever exceeds the optimum,
+everything above it is pruned — including the answer.**
+
+Uses data already logged; no new instrumentation. **And it is a different class from the six
+that died:** those all asked "was this estimate wrong for this node". This asks whether the
+global pruning floor is itself admissible — a property of the search's state rather than of any
+estimator.
