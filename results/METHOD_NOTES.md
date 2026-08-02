@@ -4254,3 +4254,61 @@ better always was.
 **Section 1 of `UPSTREAM_REPORT.md` presented the event and borrowed the force of the harm.**
 That is corrected: the event may be widespread and configuration-free; **the harm is K = 15
 specific and is 2 pairs.**
+
+---
+
+# S1 fires — but on a configuration where no harm occurs, and that is the result
+
+2026-08-02. `src/exp_final_discard.py`, K = 15.
+
+## The mask-level filter, with the source hypothesis verified first
+
+`optimal.py:762` — `if label_node not in visited:` — skips a node whose label equals an
+already-visited one (`visited` at `:652`, appended `:782` and `:816`, compared by
+commutativity-aware `__eq__`). **Skipping an already-explored equivalent is correct
+behaviour.** "This copy never scored" and "this formula's value was never computed" are
+different quantities; the first version measured the first, the claim needs the second.
+
+Filter applied at **mask** level, which is broader than the code's label-equality dedup,
+because IoU depends only on the mask.
+
+```
+K = 15, per-sentence, 27 pairs
+  UNFILTERED (upper bound, known overcount)   125 events, 23 of 27 pairs
+  FILTERED   (mask never scored anywhere)      76 events, 17 of 27 pairs
+```
+
+Tightening `scored_masks` from "every label in the returned tree" to "only the scored label"
+changed **nothing** — 76 either way.
+
+**S1 fires: 76 >> 2.** The event is not the 2/27 seen from inside the search.
+
+## The configuration mismatch — mine, and it changes what the number means
+
+`exp_final_discard.py` runs **per-sentence**. **At K = 15 per-sentence there are 0/27 misses**
+(P3). The known harm — unit88 discarding `0.25454105110196174` and returning
+`0.2522022213711222` — is from the **flat** run.
+
+So `trained a=0.2 unit88` is absent from the filtered list not because the filter is broken,
+but because **in this configuration that formula was scored and the search returned the
+optimum.** I read its absence as a false negative; it is not.
+
+**What the number therefore says, and it is stronger than what I was trying to show:**
+
+> **76 events, across 17 of 27 pairs, in a configuration with ZERO misses.** Formulas flagged
+> final are popped, never evaluated anywhere in the run, and carry an exact IoU above the
+> incumbent at that moment — **while the search still returns the true optimum on every pair.**
+
+That is the event/harm separation measured directly rather than argued: **the event is common
+and, here, entirely harmless.** Something better is always found by another route.
+
+## What is still missing before section 1 can be written
+
+The **flat K = 15** count, so the event can be compared against the configuration where the
+harm actually occurs, and the **filtered K = 50** count. The unfiltered K = 50 number is 245
+events across 15 of 27 pairs; **it is not comparable to a filtered figure** and is not quoted
+against one — that would be the Reference field failing, which is the whole reason the filter
+was added.
+
+Until both land: **"at most 125 unfiltered, 76 filtered, per-sentence K = 15 only"** — not
+"the event is common".

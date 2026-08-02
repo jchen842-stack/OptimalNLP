@@ -94,10 +94,13 @@ def main():
             return it
         def gfm(f, masks, path_masks=None, device=None):
             out = OGFM(f, masks, path_masks, device) if device is not None else OGFM(f, masks, path_masks)
-            for lab in out:
-                scored.add(key(lab))
-                try: scored_masks.add(rts.eval_formula(lab, dense).tobytes())
-                except Exception: pass
+            # TIGHT: only the top-level label is IoU-scored at optimal.py:765-800. The
+            # returned dict also holds tree intermediates that are NOT scored, and counting
+            # those made the filter over-broad -- it removed trained a=0.2 unit88, a KNOWN
+            # harmful miss, which is impossible if that mask's IoU had really been computed.
+            for lab in out: scored.add(key(lab))
+            try: scored_masks.add(rts.eval_formula(f, dense).tobytes())
+            except Exception: pass
             return out
         def est(**kw):
             out = OEST(**kw)
