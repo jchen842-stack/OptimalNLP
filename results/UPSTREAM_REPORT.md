@@ -41,6 +41,11 @@ estimated rather than evaluated. We have not established that this causes anythi
 it because a formula flagged final, whose exact IoU is computable in one operation and exceeds
 the incumbent, going unevaluated seems worth your attention regardless of consequence.
 
+**The event rate does not predict harm.** Per-sentence K=15 has 76 such discards and 0 misses;
+per-sentence K=50 has 191 and 0; flat K=15 has 45 and 2. **The configuration with the fewest
+discards is the only one where any of them cost anything.** This also means "discard fewer
+formulas" is not an indicated remedy — the configurations that discard most lose nothing.
+
 ## 2. Non-optimal returns at K = 15, which do NOT persist at K = 50
 
 Enumerating all 30,375 in-grammar length-3 formulas in integer arithmetic across 27 pairs at

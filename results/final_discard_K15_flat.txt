@@ -95,5 +95,14 @@ Usage:  python src/exp_final_discard.py <K> <flat|part>
   UNFILTERED (upper bound, known overcount): 67 events, 20 of 27 pairs
   FILTERED (mask never scored anywhere): 45 events, 16 of 27 pairs
   pairs with a filtered event: [('trained', '0.05', 'unit395'), ('trained', '0.05', 'unit412'), ('trained', '0.05', 'unit86'), ('trained', '0.05', 'unit87'), ('trained', '0.1', 'unit396'), ('trained', '0.1', 'unit413'), ('trained', '0.1', 'unit510'), ('trained', '0.2', 'unit88'), ('untrained', '0.05', 'unit396'), ('untrained', '0.05', 'unit413'), ('untrained', '0.05', 'unit510'), ('untrained', '0.05', 'unit88'), ('untrained', '0.05', 'unit92'), ('untrained', '0.1', 'unit396'), ('untrained', '0.1', 'unit88'), ('untrained', '0.2', 'unit92')]
+
+  CROSS-CHECK: filtered events whose discarded IoU beats the FINAL RETURNED IoU
+    pairs: 2   events: 2
+      ('trained', '0.2', 'unit88'): returned 0.2522022213711222
+          discarded 0.25454105110196174  (+0.9274%)  ((dep=ROOT OR dep=nsubj) AND const=NP)
+      ('trained', '0.05', 'unit86'): returned 0.20679723502304148
+          discarded 0.21660649819494585  (+4.7434%)  ((dep=ROOT OR dep=nsubj) AND tag=NN)
+    expected exactly [('trained', '0.05', 'unit86'), ('trained', '0.2', 'unit88')]
+    -> MATCHES the oracle
   silent non-appends observed at estimate_iou_frontier: 478967 (gate: nodes CAN vanish pre-pop, so a zero would need this to be 0)
   -> S1   (R1/R2 on the filtered count: R1)

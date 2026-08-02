@@ -4387,3 +4387,69 @@ M1/M2/M3 directly** without that assumption.
 **M3 still stands, and is now sharper:** if a substantial share of the 45 exit through no
 logged path, report that and stop. With a sample rather than two cases, "substantial share" is
 measurable rather than a judgement call.
+
+---
+
+# CROSS-CHECK — the event log and the exhaustive oracle AGREE
+
+2026-08-02. For each of the 45 filtered flat events, the discarded IoU compared against the
+run's **final returned IoU** for that pair — not the incumbent at discard time.
+
+```
+pairs: 2    events: 2
+
+trained a=0.2  unit88   returned 0.2522022213711222
+                        discarded 0.25454105110196174  (+0.9274%)  ((dep=ROOT OR dep=nsubj) AND const=NP)
+trained a=0.05 unit86   returned 0.20679723502304148
+                        discarded 0.21660649819494585  (+4.7434%)  ((dep=ROOT OR dep=nsubj) AND tag=NN)
+
+expected exactly the 2 known miss pairs  ->  MATCHES the oracle
+```
+
+**Exactly 2, and exactly the two known miss pairs.** Two independent instruments — an
+exhaustive 30,375-formula enumeration and a per-node event log built from entirely different
+hooks — agree on which pairs lost and by how much. This is the first cross-instrument
+agreement in this section, and it is the reason the remaining 43 events can be read as
+harmless rather than as unmeasured.
+
+**A precision defect was caught while building this.** `run_one` returns `best_iou` **rounded
+to 4dp** (5e-05 resolution) while the discarded IoUs are full precision, and the gaps under
+test are as small as 1e-03. Comparing them directly would have been the third instance of the
+precision class in this project. The returned IoU is reconstructed from the integer counts
+(`n_inter`, `n_fires`) on both paths instead.
+
+---
+
+# FILTERED K = 50 — the count, and the rate does not predict harm
+
+```
+partition       K    unfiltered   filtered   pairs w/ event   MISSES
+--------------------------------------------------------------------
+flat           15        67          45         16 / 27          2
+per-sentence   15       125          76         17 / 27          0
+per-sentence   50       245         191         12 / 27          0
+```
+
+**R1 holds at K = 50 on the filtered count: 191 events across 12 of 27 pairs.** The event is
+**not** a K = 15 artifact. It is the one thing in D6 that survives at K = 50, where the
+precondition holds and no miss occurs.
+
+## THE EVENT RATE DOES NOT PREDICT HARM — and this belongs in the report
+
+```
+per-sentence K=15    76 events   0 misses
+per-sentence K=50   191 events   0 misses
+flat         K=15    45 events   2 misses
+```
+
+**The configuration with the FEWEST events is the only one with any harm.** A reader given the
+raw counts will infer the opposite ordering, so the line has to be stated explicitly rather
+than left to inference.
+
+**It also rules out the obvious remedy.** "Discard fewer formulas" is not indicated: the
+configurations that discard most are the ones that lose nothing. Whatever makes a discard
+harmful is not its frequency, and a fix aimed at the discard rate would be aimed at the wrong
+quantity.
+
+What distinguishes the harmful two is unknown — the same "cause unknown" that closes the
+five-failed-candidates list.

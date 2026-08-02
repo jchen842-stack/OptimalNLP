@@ -122,7 +122,21 @@ def main():
                  if lab not in scored and v[0] > v[1] + 1e-12]
         hits = [(lab, v[0], v[1]) for lab, v in popped_final.items()
                 if lab not in scored and v[0] > v[1] + 1e-12 and v[2] not in scored_masks]
-        per_pair.append((k, len(popped_final), len(hits), hits, len(unfil)))
+        # CROSS-CHECK: discarded IoU vs the run's FINAL RETURNED IoU for this pair (not the
+        # incumbent at discard time). A discarded in-grammar formula beating the final answer
+        # is exactly a miss; on a pair the oracle says was optimal, it is a contradiction
+        # between the event log and the exhaustive oracle. Reported either way, never
+        # reconciled silently.
+        # Full precision on BOTH paths. run_one returns best_iou ROUNDED TO 4dp, which is
+        # 5e-05 resolution against gaps as small as 1e-03 -- the precision class that has
+        # already produced two wrong results here. Reconstruct from the integer counts.
+        if MODE == "flat":
+            ni, nf = r.get("n_inter"), r.get("n_fires")
+            ret = (ni / (nf + nn - ni)) if (ni is not None and nf is not None) else float("-inf")
+        else:
+            ret = r["iou"] if r.get("iou") == r.get("iou") else float("-inf")
+        beat = [(lab, iou) for lab, iou, t in hits if iou > ret + 1e-12]
+        per_pair.append((k, len(popped_final), len(hits), hits, len(unfil), ret, beat))
         total_hits += [(k,) + h for h in hits]
         if hits:
             print(f"  {k[0]} a={k[1]} {k[2]}: {len(hits)} of {len(popped_final)} popped-FINAL "
@@ -136,6 +150,17 @@ def main():
           f"{sum(1 for p in per_pair if p[2])} of {len(keys)} pairs")
     if n:
         print(f"  pairs with a filtered event: {sorted({h[0] for h in total_hits})}")
+    xb = [(p[0], p[5], p[6]) for p in per_pair if p[6]]
+    print(f"\n  CROSS-CHECK: filtered events whose discarded IoU beats the FINAL RETURNED IoU")
+    print(f"    pairs: {len(xb)}   events: {sum(len(p[2]) for p in xb)}")
+    for k, ret, beat in xb:
+        print(f"      {k}: returned {ret!r}")
+        for lab, iou in beat[:3]:
+            print(f"          discarded {iou!r}  (+{100*(iou/ret-1):.4f}%)  {lab}")
+    KN = {("trained","0.2","unit88"),("trained","0.05","unit86")}
+    got = {k for k, _, _ in xb}
+    print(f"    expected exactly {sorted(KN)}")
+    print(f"    -> {'MATCHES the oracle' if got == KN else 'DISAGREES with the oracle: ' + str(sorted(got ^ KN))}")
     print(f"  silent non-appends observed at estimate_iou_frontier: {nonappend[0]} "
           f"(gate: nodes CAN vanish pre-pop, so a zero would need this to be 0)")
     KNOWN = {("trained","0.2","unit88"),("trained","0.05","unit86")}
