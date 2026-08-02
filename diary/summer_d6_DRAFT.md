@@ -24,7 +24,8 @@ trained a=0.05 unit86   in-grammar 0.21660649819494585   search 0.20679723502304
 The other 25 tie to float64 equality. Both missed optima are `((dep=ROOT OR dep=nsubj) AND C)`
 — squarely in grammar — and upstream's own `beam_optimal.py` finds them while "exact" does not.
 
-**Cause.** The aggregated ceiling is inadmissible. Traced on both pairs:
+**The aggregated ceiling is inadmissible** — measured, and a separate fact from the misses.
+It is NOT established that it causes them; see the exclusions below. Traced on both pairs:
 
 ```
 unit88  ceiling 0.232677 < true_max(prefix) 0.254541   dropped at threshold 0.232934
@@ -32,7 +33,10 @@ unit86  ceiling 0.203398 < true_max(prefix) 0.216606   dropped at threshold 0.20
 ```
 
 Removed by `reduce_frontier` both times, with the node still carrying the **aggregated**
-(`"sum"`) estimate — pruned **before** refinement (Alg 1 lines 11, 52). Admissibility requires
+(`"sum"`) estimate. **But this did not stop the search:** the prefix was CREATED 4x and
+EXPANDED 3x, the optimal child was produced anyway, and the child then died with no DROPPED
+event and an admissible refined estimate. **The mechanism of the loss is unidentified and is
+deferred to D7.** Admissibility requires
 `Bott_1(E^C)_x = 0`; measured here it is **859, on 100% of samples**, against E.2.2's claim
 that the violating case is rare and unobserved.
 

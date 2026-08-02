@@ -2141,7 +2141,13 @@ search's optimality is order-dependent, not bound-guaranteed.**
 
 **4. What `reshape(1, M)` did, precisely.** It made the violation **universal** — 0% of
 samples compliant against 62-93% per-sentence. **It amplified exposure. It is not the cause.**
-The cause is that an inadmissible estimate is used as a pruning bound.
+
+**CORRECTED 2026-08-02:** this section previously continued *"The cause is that an inadmissible
+estimate is used as a pruning bound."* **That causal claim is withdrawn.** The aggregated bound
+is measurably inadmissible, and the search measurably returns non-optimal answers, but
+instrumentation does not link them: on both losing pairs the prefix was CREATED 4x and EXPANDED
+3x despite its inadmissible ceiling, and the child was produced regardless and then died with
+no DROPPED event and an admissible refined estimate. The two facts stand; the link does not.
 
 **Two remedies, offered in order of strength:**
 
@@ -2158,8 +2164,8 @@ The cause is that an inadmissible estimate is used as a pruning bound.
 measurement (859, 1/1 samples flat; 62-93% compliance per-sentence), and the byte-identical
 ceilings across partitions.
 
-**Every miss measurement is kept, unchanged.** Their cause is now correctly attributed; their
-existence was never in question.
+**Every miss measurement is kept, unchanged.** Their **cause is unidentified** — see the W2
+result and the exclusions. Their existence was never in question.
 
 ---
 
