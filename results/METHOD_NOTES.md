@@ -4312,3 +4312,78 @@ was added.
 
 Until both land: **"at most 125 unfiltered, 76 filtered, per-sentence K = 15 only"** — not
 "the event is common".
+
+---
+
+# THE EVENT/HARM TABLE — filtered and unfiltered, both partitions, one table
+
+2026-08-02. `src/exp_final_discard.py`. Same metric throughout: a formula flagged FINAL,
+popped, whose evaluated mask was **never scored anywhere in the run**, and whose exact IoU
+**exceeded the incumbent** at the moment of the pop.
+
+```
+partition       K    unfiltered   filtered   pairs w/ event   MISSES   miss pairs in filtered set
+--------------------------------------------------------------------------------------------
+flat           15        67          45         16 / 27         2      BOTH  (unit88 a=0.2,
+                                                                              unit86 a=0.05)
+per-sentence   15       125          76         17 / 27         0      n/a
+per-sentence   50       245         pending     pending         0      n/a
+```
+
+Unfiltered and filtered are never compared across rows; the columns are kept separate for
+exactly that reason.
+
+**The flat row is what connects the event to the harm.** In the configuration where the 2
+misses occur, the event fires **45 times across 16 pairs, and both miss pairs are among them.**
+The other 14 pairs had the event and no harm.
+
+## Section 1 REFRAMED — one finding, two consequences
+
+The report had two observations, and section 1 borrowed the force of section 2. Merged:
+
+> **The search routinely discards complete formulas without evaluating them.** A formula
+> flagged final is popped, its exact IoU is never computed anywhere in the run, and that IoU
+> exceeds the incumbent at the moment it is discarded. This happens 45 times across 16 of 27
+> pairs at K = 15 flat, and 76 times across 17 of 27 at K = 15 per-sentence.
+>
+> **Usually something better is found later**, by another route, and the discard costs nothing.
+> That is why 14 of the 16 affected flat pairs still return the true in-grammar optimum, and
+> why all 17 affected per-sentence pairs do.
+>
+> **In 2 of 27 flat K = 15 runs nothing better was found, and the discarded formula beat the
+> returned answer:**
+>
+> ```
+> trained a=0.2 unit88   discarded 0.25454105110196174   returned 0.2522022213711222
+> trained a=0.05 unit86  discarded 0.21660649819494585   returned 0.20679723502304148
+> ```
+>
+> **Cause unknown.** Five candidate explanations have been tested and all five failed.
+
+**ONE finding with two consequences, not two findings.**
+
+## The 45 and the 76 are LOWER bounds
+
+Both counts are over **popped** nodes. The `estimate_iou_frontier:389` non-append counter fires
+(478,967 flat, 468,645 per-sentence), so **formulas can vanish before ever being popped**, and
+those are additional and uncounted. The metric cannot see them.
+
+So: **at least 45 flat, at least 76 per-sentence.** Never "exactly", and never an upper bound.
+(The unfiltered figures are upper bounds on a *different* quantity — copies rather than
+formulas — and the two must not be mixed.)
+
+## Mechanism hunt REORDERED
+
+**Previously:** hook the two uncovered removal classes, then trace the exit path on the 2 miss
+pairs.
+
+**Now:** hook the two uncovered removal classes, then log the exit path over **all 45 flat
+events** (and the 76 per-sentence), not the 2 miss pairs.
+
+**Rationale:** 2 events is a case study and requires the miss pairs to be representative, which
+nothing establishes. 45 events across 16 pairs is a sample, and **the exit distribution answers
+M1/M2/M3 directly** without that assumption.
+
+**M3 still stands, and is now sharper:** if a substantial share of the 45 exit through no
+logged path, report that and stop. With a sample rather than two cases, "substantial share" is
+measurable rather than a judgement call.

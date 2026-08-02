@@ -36,7 +36,7 @@ frontier against the returned estimates. The six `continue` sites are NOT indivi
 they act AFTER a pop, so they cannot hide a node from the pop counter -- they are why a popped
 node ends up unscored, which is the thing being counted, not a way to miss one.
 
-Usage:  python src/exp_final_discard.py 15 | 50
+Usage:  python src/exp_final_discard.py <K> <flat|part>
 """
 import os, sys
 import numpy as np
@@ -54,8 +54,9 @@ FEATS = os.path.expanduser("~/projects/neuron-explanations-nli/nli/data/analysis
 
 def main():
     K = int(sys.argv[1]) if len(sys.argv) > 1 else 15
+    MODE = sys.argv[2] if len(sys.argv) > 2 else "part"
     print(__doc__)
-    print(f"### K = {K} ###\n")
+    print(f"### K = {K}   partition = {MODE} ###\n")
     tok = rtm.load_tokens(FEATS, MAX_SENTS)
     _, cats = rts.ARMS["all"]
     con = rtm.select_concepts(tok, cats, K, MIN_SUPPORT)
@@ -109,8 +110,11 @@ def main():
         sos.HeapProbe.heappop = pop; optimal.reduce_frontier = red
         MU.get_formula_mask_and_tree = gfm; optimal.estimate_iou_frontier = est
         try:
-            EP.NEURON_FLAT[0] = nb
-            r = EP.run_partitioned(dense2, EP.to_2d(nb, sid, pos, N_, L_), con, dense)
+            if MODE == "flat":
+                r = rts.run_one(dense, nb, 3, CAP, 1500.0, None, concepts=con)
+            else:
+                EP.NEURON_FLAT[0] = nb
+                r = EP.run_partitioned(dense2, EP.to_2d(nb, sid, pos, N_, L_), con, dense)
         finally:
             sos.HeapProbe.heappop = OPOP; optimal.reduce_frontier = ORED
             MU.get_formula_mask_and_tree = OGFM; optimal.estimate_iou_frontier = OEST
