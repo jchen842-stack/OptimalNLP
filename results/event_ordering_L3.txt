@@ -1,0 +1,82 @@
+==========================================================================================
+VALIDATION GATE — the metric must reproduce the known answer
+==========================================================================================
+   flat: losses [('trained', '0.05', 'unit86'), ('trained', '0.2', 'unit88')]   expected [('trained', '0.05', 'unit86'), ('trained', '0.2', 'unit88')]   OK
+   part: losses []   expected []   OK
+  GATE PASSED — the metric separates the 2 known losses from the 25 non-losses.
+
+==========================================================================================
+OPPORTUNITY vs HARM — length 3, K=15, M=24,199, all 27 pairs, both partitions
+==========================================================================================
+  measure                                                flat   per-sentence
+  ---------------------------------------------- ------------ --------------
+  OPPORTUNITY: inadmissible ceilings (set-based)        14/27          13/27
+  OPPORTUNITY: all optimal prefixes pruned (bound)         4/27           4/27
+  OPPORTUNITY: optimal leaf ancestors pruned     31 / 24 pairs              -
+  HARM: pairs that actually lost the optimum                2              0
+  ORDERING MARGIN, pops (min/median/max)         -183 / 294 / 1146 -217 / 533 / 1384
+  SENTINEL: prefix never CREATED                            0              0
+  SENTINEL: created, run ended before expand/drop            2              0
+  SENTINEL: pair timed out                                  0              0
+
+  POWER: 27 pairs, 2 events. DESCRIPTIVE ONLY — no rate is computed and no
+  between-partition significance is claimed. MEMBERSHIP: all 27 pairs, both
+  partitions, none excluded. REFERENCE: one enumeration, shared by object identity.
+
+--- PER-PAIR (flat) ---
+         trained a=0.2 unit88 n_pref=1 LOSS  margins=[-25]  EXPANDED_THEN_DROPPED
+         trained a=0.2 unit92 n_pref=2    .  margins=[627]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+        trained a=0.2 unit413 n_pref=2    .  margins=[]  EXPANDED_NEVER_DROPPED
+         trained a=0.1 unit88 n_pref=2    .  margins=[180]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+         trained a=0.1 unit92 n_pref=3    .  margins=[2]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+        trained a=0.1 unit396 n_pref=2    .  margins=[356, 549]  EXPANDED_THEN_DROPPED
+        trained a=0.1 unit413 n_pref=2    .  margins=[]  EXPANDED_NEVER_DROPPED
+        trained a=0.1 unit510 n_pref=1    .  margins=[]  EXPANDED_NEVER_DROPPED
+        trained a=0.05 unit86 n_pref=1 LOSS  margins=[55]  EXPANDED_THEN_DROPPED
+        trained a=0.05 unit87 n_pref=1    .  margins=[]  EXPANDED_NEVER_DROPPED
+        trained a=0.05 unit91 n_pref=1    .  margins=[]  EXPANDED_NEVER_DROPPED
+       trained a=0.05 unit395 n_pref=2    .  margins=[]  EXPANDED_NEVER_DROPPED
+       trained a=0.05 unit412 n_pref=2    .  margins=[1146]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+       untrained a=0.2 unit88 n_pref=1    .  margins=[]  EXPANDED_NEVER_DROPPED
+       untrained a=0.2 unit92 n_pref=1    .  margins=[]  EXPANDED_NEVER_DROPPED
+      untrained a=0.2 unit396 n_pref=2    .  margins=[38]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+      untrained a=0.2 unit510 n_pref=3    .  margins=[391, 645]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+       untrained a=0.1 unit88 n_pref=2    .  margins=[245]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+       untrained a=0.1 unit92 n_pref=1    .  margins=[]  EXPANDED_NEVER_DROPPED
+      untrained a=0.1 unit396 n_pref=2    .  margins=[-183]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+      untrained a=0.1 unit413 n_pref=2    .  margins=[547, 625]  EXPANDED_THEN_DROPPED
+      untrained a=0.1 unit510 n_pref=2    .  margins=[92]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+      untrained a=0.05 unit88 n_pref=2    .  margins=[9]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+      untrained a=0.05 unit92 n_pref=3    .  margins=[]  EXPANDED_NEVER_DROPPED
+     untrained a=0.05 unit396 n_pref=1    .  margins=[]  EXPANDED_NEVER_DROPPED
+     untrained a=0.05 unit413 n_pref=2    .  margins=[344]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+     untrained a=0.05 unit510 n_pref=2    .  margins=[]  EXPANDED_NEVER_DROPPED
+
+--- PER-PAIR (per-sentence) ---
+         trained a=0.2 unit88 n_pref=1    .  margins=[177]  EXPANDED_THEN_DROPPED
+         trained a=0.2 unit92 n_pref=2    .  margins=[1020]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+        trained a=0.2 unit413 n_pref=2    .  margins=[]  EXPANDED_NEVER_DROPPED
+         trained a=0.1 unit88 n_pref=2    .  margins=[283, 487]  EXPANDED_THEN_DROPPED
+         trained a=0.1 unit92 n_pref=3    .  margins=[2]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+        trained a=0.1 unit396 n_pref=2    .  margins=[533]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+        trained a=0.1 unit413 n_pref=2    .  margins=[]  EXPANDED_NEVER_DROPPED
+        trained a=0.1 unit510 n_pref=1    .  margins=[]  EXPANDED_NEVER_DROPPED
+        trained a=0.05 unit86 n_pref=1    .  margins=[22]  EXPANDED_THEN_DROPPED
+        trained a=0.05 unit87 n_pref=1    .  margins=[]  EXPANDED_NEVER_DROPPED
+        trained a=0.05 unit91 n_pref=1    .  margins=[]  EXPANDED_NEVER_DROPPED
+       trained a=0.05 unit395 n_pref=2    .  margins=[]  EXPANDED_NEVER_DROPPED
+       trained a=0.05 unit412 n_pref=2    .  margins=[1384]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+       untrained a=0.2 unit88 n_pref=1    .  margins=[1105]  EXPANDED_THEN_DROPPED
+       untrained a=0.2 unit92 n_pref=1    .  margins=[]  EXPANDED_NEVER_DROPPED
+      untrained a=0.2 unit396 n_pref=2    .  margins=[44]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+      untrained a=0.2 unit510 n_pref=3    .  margins=[625, 945]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+       untrained a=0.1 unit88 n_pref=2    .  margins=[589, 639]  EXPANDED_THEN_DROPPED
+       untrained a=0.1 unit92 n_pref=1    .  margins=[]  EXPANDED_NEVER_DROPPED
+      untrained a=0.1 unit396 n_pref=2    .  margins=[-217]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+      untrained a=0.1 unit413 n_pref=2    .  margins=[]  EXPANDED_NEVER_DROPPED
+      untrained a=0.1 unit510 n_pref=2    .  margins=[547]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+      untrained a=0.05 unit88 n_pref=2    .  margins=[]  EXPANDED_NEVER_DROPPED
+      untrained a=0.05 unit92 n_pref=3    .  margins=[189]  EXPANDED_NEVER_DROPPED,EXPANDED_THEN_DROPPED
+     untrained a=0.05 unit396 n_pref=1    .  margins=[]  EXPANDED_NEVER_DROPPED
+     untrained a=0.05 unit413 n_pref=2    .  margins=[]  EXPANDED_NEVER_DROPPED
+     untrained a=0.05 unit510 n_pref=2    .  margins=[]  EXPANDED_NEVER_DROPPED
