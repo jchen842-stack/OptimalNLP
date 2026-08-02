@@ -36,6 +36,7 @@ verdict rather than an error.
 | 3 | **Expanded-count vs formula-space** | `K*(3K)^(L-1)` formula-space ratios (24.0x, 12.4x) | measured **wall-clock** ratios (83.2x, 36.6x) | the P1 "cancellation" finding, withdrawn |
 | 4 | **`nan` sentinel** | `true - x > tol` | `x` was `nan` / `None` / no-solution | 12 no-label runs scored as successes; 10 comparison sites still unguarded |
 | 5 | **Treatment-dependent median membership** | all-27 median | timed-out peaks are truncated, and membership moves with the treatment | corrected to a matched set before the L4 run (A1) |
+| 16 | **Ceiling compared against the wrong quantity** (assistant) | assigned ceiling of the dropped entry | `true_max(P)` over *extensions*, while the dropped entry was the **INDIVIDUAL (stop-here)** path | logging all four path estimates pre-filter, as instructed, before hand-computing anything |
 | 15 | **P7 registered against the wrong dependent variable** (assistant) | rationale: pruning -> nodes **expanded** (1.03x, near-invariant as predicted) | registered on **peak frontier** (1.39x), which also counts re-insertions | measuring refinement churn to explain the 1.39x/1.03x split |
 | 14 | **One diary consequence hung off a disjunction** | P5 = (a) OR (b), consequence "D5.0 superseded" | (a) and (b) fired in **opposite directions**; the scorer emitted a verdict the data contradicts | L4 landed and the frontier had *grown* while timeouts fell |
 | 13 | **"optima biased toward protected signatures"** (assistant) | 47.4% observed | 66.7% space share; Wilson CI on 9/19 is [27.3%, 68.3%] and **contains** it | computed when instance 12 forced a power check one level up. **Parent of instance 12.** |
@@ -138,7 +139,13 @@ Discrimination is what makes a Power failure invisible.
 | 6 | Depth-3 reference under a depth-4 search | **Reference** — enumeration depth did not match search length |
 | 7 | Item 3 blocked on an uncomputed effect size | **Discrimination** (decision form) — no magnitude computed |
 
-**15 of 15 caught. All six fields fire at least once.**
+**16 of 16 caught. All six fields fire at least once.**
+
+Instance 16 fires on **Quantities** (a stop-here bound compared against an extend-from-here
+maximum) with **Reference** as a second hit (which of the four frontier entries the ceiling
+belonged to was never established). **What let it survive: the numbers were consistent with
+the hypothesis.** 0.2327 really is below 0.2545, the drop really happened, and the miss really
+occurred — so nothing in the result prompted a check of what the 0.2327 was a bound *on*.
 
 Instance 15 fires on **Quantities**: right mechanism, wrong dependent variable. P7 would have
 been SUPPORTED on the quantity its own rationale described. It was committed while writing a
@@ -237,3 +244,34 @@ expression, or an intent rather than from the control flow** (four occurrences t
 recorded in `results/METHOD_NOTES.md`). No comparison precondition addresses it. The remedy is
 to read the flow, and it is cheap — the four cost between five and twenty-five lines of source
 each to settle.
+
+---
+
+## STATE OF THE 2/27 AT D6 CLOSE — five candidates tested, five failed
+
+```
+1  the disjoint fork (can_improve_or_iou_disjoint_case)   FALSIFIED  F1: forcing are_disjoint
+                                                                     False recovered neither miss
+2  aggregated-bound inadmissibility                        RETRACTED  category error; no
+                                                                     inadmissible estimate shown
+3  reduce_frontier threshold prune                         EXCLUDED   no DROPPED event on the
+                                                                     optimal formula
+4  the :699-709 refinement discard                         EXCLUDED   refined estimate above both
+                                                                     threshold and the IoU it bounds
+5  all three chain estimates (:368 :509 :581)              EXONERATED every extension path bounds
+                                                                     the reachable value from above
+```
+
+**Cause unknown.** The misses are measured and reproducible at K = 15; nothing established
+explains them, and at K = 50 they do not occur.
+
+## The mechanism hunt, reframed
+
+The question is **no longer "which bound was wrong"** — all four bounds are cleared. It is:
+
+> **through which control-flow path was a complete formula, carrying admissible bounds,
+> discarded unevaluated?**
+
+Same candidates (`recent_nodes` dedup `:749-757`, the distributive path `:731-767`), better-posed
+question. **The two uncovered removal classes still gate M1/M2/M3**, and until they are hooked
+M3 cannot separate "the control-flow model is wrong" from "it left through an unwatched site".

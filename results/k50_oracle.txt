@@ -38,3 +38,38 @@ length-3 per pair. Intersections via float32 GEMM against all 27 neurons at once
     level-3 6000/7500  (98s)
   exhaustive optimum done (122s)
 
+                         pair     returned  K50 optimum     gap%  status
+         trained a=0.2 unit88     0.262204     0.262204 -0.0000%  ok  <- known at K=15
+         trained a=0.2 unit92     0.257831     0.257831 -0.0000%  ok
+        trained a=0.2 unit413     0.468945     0.468945 -0.0000%  ok
+         trained a=0.1 unit88     0.193314     0.193314 -0.0000%  ok
+         trained a=0.1 unit92     0.167307     0.167307 -0.0000%  ok
+        trained a=0.1 unit396     0.145326     0.145326  0.0000%  ok
+        trained a=0.1 unit413     0.138780     0.138780 -0.0000%  ok
+        trained a=0.1 unit510     0.162727     0.162727 -0.0000%  ok
+        trained a=0.05 unit86     0.380558     0.380558 -0.0000%  ok  <- known at K=15
+        trained a=0.05 unit87     0.083754     0.083754 -0.0000%  ok
+        trained a=0.05 unit91     0.118598     0.118598 -0.0000%  ok
+       trained a=0.05 unit395     0.113303     0.113303  0.0000%  ok
+       trained a=0.05 unit412     0.405501     0.405501  0.0000%  ok
+       untrained a=0.2 unit88     0.238792     0.238792  0.0000%  ok
+       untrained a=0.2 unit92     0.280018     0.280018 -0.0000%  ok
+      untrained a=0.2 unit396     0.299637     0.299637  0.0000%  ok
+      untrained a=0.2 unit510     0.290909     0.290909 -0.0000%  ok
+       untrained a=0.1 unit88     0.135269     0.135269 -0.0000%  ok
+       untrained a=0.1 unit92     0.194731     0.194731  0.0000%  ok
+      untrained a=0.1 unit396     0.235374     0.235374  0.0000%  ok
+      untrained a=0.1 unit413     0.251169     0.251169  0.0000%  ok
+      untrained a=0.1 unit510     0.183314     0.183314 -0.0000%  ok
+      untrained a=0.05 unit88     0.096441     0.096441 -0.0000%  ok
+      untrained a=0.05 unit92     0.135570     0.135570  0.0000%  ok
+     untrained a=0.05 unit396     0.159757     0.159757 -0.0000%  ok
+     untrained a=0.05 unit413     0.228571     0.228571 -0.0000%  ok
+     untrained a=0.05 unit510     0.096711     0.096711  0.0000%  ok
+
+  misses at K=50 per-sentence: 0/27   sentinels: 0
+
+  the 2 K=15 known misses at K=50: NEITHER misses
+  -> K2
+
+  unevaluated-FINAL observation: 445644 of 525933 refinement calls carried next_op == INDIVIDUAL  -> REPRODUCES at K=50

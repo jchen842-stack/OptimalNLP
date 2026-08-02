@@ -4097,3 +4097,89 @@ instruction to log the three chain estimates *before* hand-computing anything is
 it — the hand-computation would have compared Eq (50)/(51) against a function that was never
 implicated, matched, and been reported as "the estimator behaves as specified", which is true
 and would have concealed that the premise was wrong.
+
+---
+
+# K2 FIRES — 0/27 misses at K = 50, per-sentence
+
+2026-08-02. `results/k50_oracle.txt`, float64 re-run.
+
+```
+misses at K = 50 per-sentence : 0/27      sentinels : 0
+the 2 K = 15 known misses     : NEITHER misses
+-> K2
+```
+
+**The 2/27 misses do not survive at K = 50.** Per the registration, K2 means they are a
+K = 15 artifact.
+
+## Resolution floor, reported alongside the verdict
+
+Counts are integers <= 24,199, exactly representable in float64 (2^53 headroom), so the GEMM
+is exact and only the final division rounds.
+
+```
+relative rounding of the IoU division   2.22e-16
+absolute, on IoU ~0.25                  5.55e-17
+test threshold                          1.00e-09      ~1.8e07x ABOVE the floor
+smallest real gap the test could miss   1e-9 absolute = 4e-7 relative
+the two K=15 gaps, for scale            2.3e-3 and 9.8e-3 absolute
+```
+
+**The threshold is six orders of magnitude below the effects it needs to detect and eight
+above the instrument floor.** It does not repeat the `1e-12` mistake in either direction.
+
+## THE CONFOUND STANDS — this does not identify the driver
+
+Registered before the result: **K = 50 changes the precondition AND makes the space 37x
+larger.** K2 firing is consistent with either. **2b (matched-K, `Bott^A_1 = 0`, same 30,375
+space) has not been run**, so nothing here says whether the precondition or K itself is the
+driver.
+
+## The unevaluated-FINAL observation REPRODUCES, and is configuration-free
+
+```
+445,644 of 525,933 refinement calls carried next_op == INDIVIDUAL   (84.7%)   at K = 50
+```
+
+**It is not a K = 15 artifact.** Complete formulas are estimated rather than evaluated at
+K = 50 as well, in the regime where the precondition holds and no misses occur. This is now
+the only finding in D6 that survives at paper-adjacent settings.
+
+---
+
+# RETRACTION, EXTENDED
+
+## Partition-invariance — fact kept, consequence removed
+
+The derivation and the byte-identical ceilings stand as a **fact about the aggregated
+estimate**. **Its only role in this project was the consequence** — *"repartitioning cannot
+repair the inadmissibility"* — and there is no demonstrated inadmissibility to repair. **The
+consequence is withdrawn.** The fact is retained because it is measured and may matter later;
+it currently supports nothing.
+
+## Item 4's table — the left column is retracted
+
+```
+OPPORTUNITY  inadmissible ceilings (set-based)     14/27   13/27   RETRACTED
+OPPORTUNITY  all optimal prefixes pruned (bound)    4/27    4/27   RETRACTED
+OPPORTUNITY  optimal leaf ancestors pruned      31/24 pairs    -   RETRACTED
+HARM         pairs that actually lost the optimum      2       0   STANDS
+```
+
+All three opportunity counts were computed by comparing a node's key at drop time against
+`true_max(P)` over the whole subtree — the category error. **The opportunity-vs-harm gap was
+the point of that table, and it is gone.** What remains is two harm counts, 2 and 0, which are
+correct and are no longer contrasted with anything.
+
+## `n_prefixes` — correlation kept, mechanism removed
+
+**Kept:** 2 of 2 losses have `n_prefixes = 1`; 0 of 18 pairs with `n_prefixes >= 2` lost.
+Kept also: the structural derivation of `n_prefixes` from the operator signature, and the 2/3
+signature-space share. Those are combinatorics and are independent.
+
+**Removed:** the explanation — *"`n_prefixes` is the number of independent chances to be
+expanded before an unsound prune fires"*. There is no established unsound prune. **It is now a
+correlation on n = 2 with no mechanism**, and it must be stated that way wherever it appears.
+The inspection-only diagnostic built on it is correspondingly weakened: it predicts which
+units were vulnerable in our runs, without a reason.
