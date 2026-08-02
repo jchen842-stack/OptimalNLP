@@ -3490,3 +3490,88 @@ second : cache[id(f)]             ids reused after GC                    non-det
 identity for formula objects.** The first produced an obviously wrong answer — 0 of 27 nodes
 found — and was caught in minutes. The second produced *plausible* answers, 1 and 3, small
 numbers in the right range, and survived long enough to launch an investigation.
+
+---
+
+# W2 FIRES — the refined estimate is admissible. Mechanism UNIDENTIFIED, to D7.
+
+2026-08-02. `src/exp_refined_estimate.py`, output `results/refined_estimate.txt`.
+Registered before the hook existed (`aac37d5`).
+
+```
+trained a=0.2  unit88   refined 0.4175506268081003  threshold 0.25056904400606983  exact IoU 0.25454105110196174
+trained a=0.05 unit86   refined 0.546485260770975   threshold 0.1771041084962106   exact IoU 0.21660649819494585
+```
+
+**Both refined estimates are above the threshold AND above the exact IoU they bound.** The
+sample heuristic is admissible on these two complete formulas. **W1 is refuted; W2 fires.**
+
+**The winning child did not die at `optimal.py:699-709`.** Per the registration: the mechanism
+is **UNIDENTIFIED**, nothing is written to `UPSTREAM_REPORT.md`, and it goes to **D7**.
+
+What is now excluded, each by measurement rather than reading:
+
+```
+reduce_frontier threshold prune   excluded -- no DROPPED event on the formula
+the :697 incumbent skip           excluded -- ceiling 0.4176 > threshold 0.2506
+the :699-709 refinement discard   excluded -- refined 0.4176 is NOT < threshold
+```
+
+`recent_nodes` dedup (`:749-757`) and the distributive-property path (`:731-767`) remain
+un-excluded. **They are not asserted as the cause** — that inference is exactly the named
+failure mode, and this would be its seventh occurrence.
+
+## The FINAL flag fired, and it is a separate finding
+
+On **every** refinement event, on both cases:
+
+```
+next_op = INDIVIDUAL   FINAL = True   heuristic = sample
+```
+
+**A complete formula was estimated rather than evaluated.** The node was flagged final — its
+exact IoU was computable in one mask operation — and the search spent a heuristic estimate on
+it instead. This is a **control-flow observation, not a bound defect**, and it gets its own
+sentence as registered in advance.
+
+It does not by itself cause the loss (the estimate produced was admissible), but it means the
+search carries complete formulas through an estimation path where an exact evaluation was
+available.
+
+## Retraction — "discarded on an upper bound below its own IoU"
+
+**Mine, and it was drafted before the measurement.** It came from extrapolating the
+prefix-level trace, where the ceiling genuinely was below `true_max(P)`, down to the child,
+where it is not. Measured:
+
+```
+ceiling  0.4175506268081003
+IoU      0.25454105110196174
+threshold 0.25056904400606983
+                                 ceiling > IoU > threshold
+```
+
+The bound is **above** the value it bounds — admissible. And the sharper point the wrong
+wording obscured: **the formula's own IoU exceeds the incumbent threshold by 0.00397201, so
+had it been scored it would have become the new incumbent.** It was discarded while strictly
+better than the incumbent it was compared against.
+
+**Sixth assert-from-intent occurrence, and the first where the wording was supplied in advance
+of the measurement.** That is the distinguishing feature: the previous five were assertions
+about code I had read; this one was a sentence written to be filled in by a number, and the
+number contradicted it. Drafting the conclusion before the measurement is a distinct hazard
+from misreading the code, and it is the one that scales worst — the sentence was already
+well-formed, quotable, and pointed at the right file.
+
+## Margin comparison — carried with every appearance of 0/27
+
+**Wherever `0/27 losses per-sentence` appears, this goes with it:**
+
+```
+per-sentence minimum headroom   +0.00027657
+flat drop margins               0.00025690  and  0.00033742
+```
+
+**The closest per-sentence survivor cleared the threshold by less than one of the flat losses
+failed by.** `0/27` is not a safety margin. It is one favourable pop-ordering away from being
+`1/27`, and the distance is measured, not inferred.

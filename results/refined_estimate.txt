@@ -1,0 +1,43 @@
+PRE-REGISTERED, before `path_heuristic.update_paths_iou` was hooked:
+
+  W1  refined estimate for the winning child < 0.25056904400606983, while its exact IoU is
+      0.25454105110196174
+      -> THE REFINED SAMPLE ESTIMATE IS INADMISSIBLE ON A COMPLETE FORMULA. An upper bound
+         below the value it bounds.
+
+  W2  refined estimate >= 0.25056904400606983
+      -> it died by another path. Mechanism UNIDENTIFIED, nothing is written to
+         UPSTREAM_REPORT.md, and the mechanism goes to D7 unidentified.
+
+CAPTURED PER EVENT: refined estimate, minimum_threshold, exact IoU, and whether the node was
+flagged FINAL (`next_op == "INDIVIDUAL"`) at the time of refinement.
+
+THE FINAL FLAG MATTERS ON ITS OWN, and gets a different sentence either way:
+  * flagged final and still estimated -> a COMPLETE formula was bounded instead of evaluated.
+    That is a CONTROL-FLOW defect: its exact IoU was computable and was not computed.
+  * not flagged final -> the node was still a partial path, and an inadmissible bound on it is
+    a BOUND defect.
+
+
+
+=== trained a=0.2 unit88 ===
+  exact IoU of the optimum : 0.25454105110196174
+  search returned          : ((tag=NN OR dep=nsubj) AND (NOT const=PP))  IoU=0.2522
+  refinement events on the optimal formula: 1
+    refined=0.4175506268081003  threshold=0.25056904400606983  next_op=INDIVIDUAL  FINAL=True  heuristic=sample
+      refined < threshold ? False   refined < exact IoU ? False
+      -> W2
+      NOTE: node flagged FINAL and still ESTIMATED -- a complete formula bounded instead of evaluated (CONTROL-FLOW defect).
+
+=== trained a=0.05 unit86 ===
+  exact IoU of the optimum : 0.21660649819494585
+  search returned          : ((const=NP AND tag=NN) AND dep=nsubj)  IoU=0.2068
+  refinement events on the optimal formula: 2
+    refined=0.546485260770975  threshold=0.1771041084962106  next_op=INDIVIDUAL  FINAL=True  heuristic=sample
+      refined < threshold ? False   refined < exact IoU ? False
+      -> W2
+      NOTE: node flagged FINAL and still ESTIMATED -- a complete formula bounded instead of evaluated (CONTROL-FLOW defect).
+    refined=0.546485260770975  threshold=0.1771041084962106  next_op=INDIVIDUAL  FINAL=True  heuristic=sample
+      refined < threshold ? False   refined < exact IoU ? False
+      -> W2
+      NOTE: node flagged FINAL and still ESTIMATED -- a complete formula bounded instead of evaluated (CONTROL-FLOW defect).
