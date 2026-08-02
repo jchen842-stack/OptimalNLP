@@ -117,13 +117,20 @@ prunes across 24/27 pairs). **All count opportunities; all are nearly uncorrelat
 outcome** — 2 actual losses flat, 0 per-sentence. The event-ordering metric (was the prefix
 expanded before any copy was dropped) is the section's **missing dependent variable**.
 
-## 7. P9 — length-scaling of vulnerability **[PENDING]**
+## 7. Length-scaling of vulnerability — NOT MEASURABLE at n = 27
 
-Returned-formula form, baseline **57.7%** (15 of 26 returned L3 formulas are mixed). Rising =
-the bug concentrates with length; falling = longer formulas buy redundancy. The **true-optima**
-form requires the length-4 oracle and is **D7**.
+**This is a result, not a gap.** The returned-L3 mixed-share baseline is 15/26 = **57.7%**; the
+signature-space share is **66.7%**; the gap is **9.0 points**. The binomial SE at n = 26 is
+**9.7 points** — larger than the effect — and 80% power to separate them needs **n ~ 236**.
+The Wilson 95% CI on the baseline itself, **[38.9%, 74.5%]**, already contains the space share.
+
+No directional conclusion about length-scaling is available from this corpus. The length-4
+share will be reported as a point estimate with a CI and nothing more. **P9 is withdrawn and
+its powered form deferred to D7**, where item 3's 50-units-per-arm scaling is the only queued
+run approaching the required n.
 
 ## Deferred to D7
 
 Length-4 oracle; fork-only rerun at `optimal_utils.py:271`; queue items D/E/F; queue items 3
-(50 units/arm), 4 (fixed work), 5 (alpha=0.005, beam-only). **None changes what D6 concludes.**
+(50 units/arm), 4 (fixed work), 5 (alpha=0.005, beam-only); **the powered P9**. None changes
+what D6 concludes.

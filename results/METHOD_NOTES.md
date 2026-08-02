@@ -2964,3 +2964,76 @@ P9  mixed (single-prefix) share of RETURNED length-4 formulas, against 57.7% ret
       falling -> longer formulas buy redundancy
     Reference points, not the comparison: 47.4% (L3 optima), 66.7% (signature space).
 ```
+
+---
+
+# P9 — VERDICT WITHDRAWN. Not scoreable at n = 27.
+
+Amendment registered before `partition_L4.csv` exists. **Reason for the amendment: the
+baseline changed from 47.4% to 57.7% when the subject was corrected to returned formulas, so
+the bands registered against 47.4% are invalid.** Rather than restate them, the verdict is
+withdrawn — because at this `n` no band can be resolved.
+
+**Arithmetic, verified independently before acting on it:**
+
+```
+p  = 15/26 = 0.5769                     (returned-L3 mixed share)
+SE = sqrt(0.5769 * 0.4231 / 26) = 0.09689  ->  9.7 points
+gap to the 66.7% signature-space share  ->  9.0 points
+n for 80% power = (1.96 + 0.84)^2 * 0.2441 / 0.0901^2 = 235.8  ->  ~236
+```
+
+**The standard error is larger than the effect.** 9.7 points of noise against a 9.0-point gap.
+Separating the two reference points at 80% power needs **n ~ 236**; we have **27**.
+
+A stronger version of the same point, computed while checking: the **Wilson 95% CI for the
+baseline itself** — 15 of 26 — is **[38.9%, 74.5%]**, which **contains** the 66.7% space share.
+The baseline cannot be distinguished from the space share at this `n`, let alone the length-4
+value from the baseline.
+
+**Replacement, which is what P9 becomes:**
+
+> Report the length-4 returned-formula mixed share as a **point estimate with a 95% Wilson
+> confidence interval**, against both reference points (57.7% returned-L3, 66.7% signature
+> space). **State explicitly that no directional conclusion is available at this n.** Do not
+> report "rising", "falling", or "invariant".
+
+The powered version moves to **D7**, alongside the length-4 oracle and item 3's 50-units-per-arm
+scaling — which is the natural home, since 50 per arm across two arms is the only queued run
+that approaches the required `n`.
+
+## D6 instance 12 — a prediction registered without checking whether it could fire
+
+**Field: Power.** Same shape as instance 2, one level up: instance 2 was a *check* that
+sampled too few cases to fire (14.5%); instance 12 is a *prediction* whose discriminating
+comparison was never tested for resolvability at the available `n`.
+
+P9 went through **three registrations** — original, subject-corrected, baseline-corrected —
+and each was reviewed by both participants. **None asked whether 27 pairs could resolve a
+9-point difference.** The Discrimination field was satisfied at every stage (the bands gave
+opposite conclusions), which is exactly what made the gap invisible: a prediction can be
+perfectly discriminating in principle and unfireable in practice, and only Power distinguishes
+those.
+
+---
+
+# D6 / D7 BOUNDARY — updated
+
+**P9 leaves D6 entirely.**
+
+D6's length-scaling statement becomes:
+
+> **The length-scaling of vulnerability is not measurable at n = 27.** Separating the observed
+> mixed share from the signature-space share requires n ~ 236; the 95% CI on the baseline
+> itself spans [38.9%, 74.5%]. Deferred to D7.
+
+**That is a result, not a gap.** It bounds what the corpus can answer, and it is the reason
+item 3's 50-units-per-arm scaling matters beyond the trained/untrained question it was queued
+for.
+
+**D6 retains:** soundness; partition-invariance; the measurement-defect class and checklist;
+the `n_prefixes` mechanism and the 2/3 signature share; the upstream diagnostic and remedies;
+item 4's harm measurement `[PENDING]`.
+
+**D7 takes:** the length-4 oracle; the fork-only rerun at `optimal_utils.py:271`; queue items
+D/E/F; queue items 3, 4, 5; **and the powered P9.**

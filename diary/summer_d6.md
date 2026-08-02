@@ -36,6 +36,7 @@ verdict rather than an error.
 | 3 | **Expanded-count vs formula-space** | `K*(3K)^(L-1)` formula-space ratios (24.0x, 12.4x) | measured **wall-clock** ratios (83.2x, 36.6x) | the P1 "cancellation" finding, withdrawn |
 | 4 | **`nan` sentinel** | `true - x > tol` | `x` was `nan` / `None` / no-solution | 12 no-label runs scored as successes; 10 comparison sites still unguarded |
 | 5 | **Treatment-dependent median membership** | all-27 median | timed-out peaks are truncated, and membership moves with the treatment | corrected to a matched set before the L4 run (A1) |
+| 12 | **P9 registered without checking it could fire** | bands separated by 9.0 points | SE 9.7 points at n=26; n~236 needed for 80% power | computed when the baseline correction forced a re-registration |
 | 11 | **P9 scored a different subject than it named** | named: length-4 **optima** | scored: **returned formulas**, whose correctness is the open question | caught on review before the L4 file existed; circular as registered |
 | 10 | **Two L4 sources, two extraction paths** | flat CSV stores integer counts | partition CSV stores `repr(float)` | logged pre-emptively; no discrepancy produced, but the rounded-`exact_IoU` version of this bit once (17/27 vs 2/27) |
 | 9 | **P3 read as a fix without a power check** | "both misses recovered, 0/27" | 0 of **9** vulnerable pairs; p ~ 0.10 under the flat rate | applying the Power field retroactively to a registration that predates the checklist |
@@ -129,7 +130,14 @@ a verdict carries these six fields, stated before the comparison runs.**
 | 6 | Depth-3 reference under a depth-4 search | **Reference** — enumeration depth did not match search length |
 | 7 | Item 3 blocked on an uncomputed effect size | **Discrimination** (decision form) — no magnitude computed |
 
-**11 of 11 caught. All six fields fire at least once.**
+**12 of 12 caught. All six fields fire at least once.**
+
+Instance 12 fires on **Power**, and is instance 2 one level up: instance 2 was a *check* that
+sampled too few cases; instance 12 is a *prediction* never tested for resolvability at the
+available n. P9 was registered three times and reviewed by both participants each time, and
+**none of the three asked whether 27 pairs could resolve a 9-point difference** — because
+Discrimination was satisfied at every stage. A prediction can be perfectly discriminating in
+principle and unfireable in practice; only Power separates those.
 
 Instance 11 fires on **Quantities** primarily (subject substitution: optima vs returned
 formulas) and on **Reference** independently (the 47% baseline was computed on optima, so
