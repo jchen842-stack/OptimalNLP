@@ -2609,17 +2609,23 @@ both the signature space and the protected subspace by 3, so the ratio is fixed.
 changes with length, it is not the share of the *space* that is vulnerable — it can only be the
 share of *realised optima* that land in it.
 
-## Observed optima are biased toward protected signatures
+## Observed optima vs signature space — NO RESOLVABLE DIFFERENCE (see the retraction below)
 
 ```
 signature space, vulnerable share       : 67%
 observed length-3 optima, mixed share   : 9 mixed of 19 two-operator optima = 47%
 ```
 
-Real optima land in protected signatures **more often than chance** — 47% vulnerable against
-67% of the space. Repeated-operator formulas (`a OR b OR c`, `a AND NOT b AND NOT c`) are
-apparently what these neurons actually select for, and that repetition is exactly what buys the
-redundancy. The protection is incidental, not designed.
+**RETRACTED — see "Instance 13" below.** The claim made here was that real optima land in
+protected signatures *more often than chance* — 47.4% vulnerable against 67% of the space —
+and that repeated-operator formulas are what these neurons select for.
+
+**That difference is not resolvable at n = 19.** The Wilson 95% CI on 9/19 is
+**[27.3%, 68.3%]**, which **contains** the 66.7% space share. The observed gap of 19.3 points
+is **1.69 SE** (SE = 11.5 points), against the ~2.8 SE needed for 80% power.
+
+What survives: the observed mixed share is 47.4% (optima) and 57.7% (returned formulas), and
+the signature-space share is 66.7%. **No claim is made that they differ.**
 
 ---
 
@@ -2633,9 +2639,7 @@ computable from the length-4 optima alone with no extra instrumentation.
 P9   mixed (single-prefix) share of length-4 optima:
 
      ~47%   -> vulnerability is LENGTH-INVARIANT. The length-3 reading transfers.
-     -> 67% -> the bug CONCENTRATES with length: optima stop being biased toward protected
-               signatures, and every length-4 result in this repo is MORE exposed than the
-               length-3 ones.
+     -> 67% -> [BAND WITHDRAWN with P9; retained only to show what was registered]
      < 47%  -> longer formulas BUY REDUNDANCY: more room for repeated-operator runs.
 ```
 
@@ -3037,3 +3041,86 @@ item 4's harm measurement `[PENDING]`.
 
 **D7 takes:** the length-4 oracle; the fork-only rerun at `optimal_utils.py:271`; queue items
 D/E/F; queue items 3, 4, 5; **and the powered P9.**
+
+---
+
+# INSTANCE 13 — the parent of instance 12, and it is mine
+
+**Field: Power. Attributed to the assistant.**
+
+The claim *"optima are biased toward protected signatures"* — 47.4% observed against 66.7% of
+signature space — was asserted without checking whether that difference is resolvable at the
+available `n`.
+
+**Verified:**
+
+```
+optima-based mixed share  9/19 = 47.4%   Wilson 95% CI [27.3%, 68.3%]   contains 66.7%: YES
+observed gap to space share                                            19.3 points
+SE at n = 19                                                           11.5 points
+gap in SE units                                                        1.69   (need ~2.8 for 80% power)
+```
+
+**The interval contains the value it was claimed to differ from.** No bias is established.
+
+## It is the parent of instance 12, and the lineage is the point
+
+P9's entire framing descended from this claim. The registered bands — *"~47% -> length-invariant,
+-> 67% -> the bug concentrates"* — presupposed that 47.4% and 66.7% were **distinguishable
+quantities between which a length-4 value could move**. They are not distinguishable at this
+`n`, so the bands were measuring movement across a difference that was never established.
+
+**The unsupported claim propagated into a registered prediction and survived three
+registrations and three joint reviews.** Instance 12 recorded that none of those reviews asked
+whether 27 pairs could resolve 9 points. Instance 13 is why that question was never reached:
+the underlying 19-point difference had already been accepted as real, so the smaller derived
+gap inherited its unexamined status.
+
+**Recorded as a lineage, not two independent entries.** A defect in an asserted premise
+becomes invisible once predictions are built on it — the predictions get scrutinised, the
+premise does not, because it is no longer the thing being tested.
+
+---
+
+# THE POWER FIELD — restated to cover any comparison
+
+The original wording — *"if the comparison samples, what is the probability it fires when the
+defect is present?"* — applies only to sampled checks. Instances 12 and 13 are not sampled
+checks; they are point estimates compared against reference values. The field did not, as
+written, reach them.
+
+**Restated:**
+
+> **Power** — *What is the smallest effect this comparison can resolve at the available `n`,
+> and is the predicted effect larger than it?*
+
+**Verified to fire on all three Power instances under the new wording:**
+
+```
+instance  2   oracle drew 3 of 27 cases; smallest resolvable effect is "a drawn pair misses";
+              P(fire | 2 bad pairs) = 1 - C(25,2)/C(27,2) = 14.5%          FIRES
+instance 12   P9: SE 9.7 points at n = 26 against a predicted 9.0-point gap; n ~ 236 needed
+                                                                            FIRES
+instance 13   bias claim: SE 11.5 points at n = 19 against a 19.3-point gap = 1.69 SE;
+              Wilson CI [27.3%, 68.3%] contains the compared value          FIRES
+```
+
+Instance 2 still fires under the sampled reading; 12 and 13 fire only under the restated one.
+
+**Added to the checklist preamble:**
+
+> **A prediction can be perfectly discriminating in principle and unfireable in practice. Only
+> Power separates those.** Discrimination asks whether different outcomes give different
+> conclusions; Power asks whether the data can tell those outcomes apart. Satisfying
+> Discrimination is what makes a Power failure invisible.
+
+---
+
+# REMAINING D6 WORK — no new threads
+
+1. **The write-up** — `diary/summer_d6_DRAFT.md`, numbers and structure complete.
+2. **Item 4**, the event-ordering harm measurement, on `partition_L4.csv`'s arrival.
+3. **The advisor message** — `results/UPSTREAM_REPORT.md` and
+   `results/UPSTREAM_MESSAGE_DRAFT.md`, written, unsent, push held.
+
+Nothing else is opened.

@@ -36,6 +36,7 @@ verdict rather than an error.
 | 3 | **Expanded-count vs formula-space** | `K*(3K)^(L-1)` formula-space ratios (24.0x, 12.4x) | measured **wall-clock** ratios (83.2x, 36.6x) | the P1 "cancellation" finding, withdrawn |
 | 4 | **`nan` sentinel** | `true - x > tol` | `x` was `nan` / `None` / no-solution | 12 no-label runs scored as successes; 10 comparison sites still unguarded |
 | 5 | **Treatment-dependent median membership** | all-27 median | timed-out peaks are truncated, and membership moves with the treatment | corrected to a matched set before the L4 run (A1) |
+| 13 | **"optima biased toward protected signatures"** (assistant) | 47.4% observed | 66.7% space share; Wilson CI on 9/19 is [27.3%, 68.3%] and **contains** it | computed when instance 12 forced a power check one level up. **Parent of instance 12.** |
 | 12 | **P9 registered without checking it could fire** | bands separated by 9.0 points | SE 9.7 points at n=26; n~236 needed for 80% power | computed when the baseline correction forced a re-registration |
 | 11 | **P9 scored a different subject than it named** | named: length-4 **optima** | scored: **returned formulas**, whose correctness is the open question | caught on review before the L4 file existed; circular as registered |
 | 10 | **Two L4 sources, two extraction paths** | flat CSV stores integer counts | partition CSV stores `repr(float)` | logged pre-emptively; no discrepancy produced, but the rounded-`exact_IoU` version of this bit once (17/27 vs 2/27) |
@@ -109,13 +110,18 @@ attributed cause changed twice; their existence did not.
 The taxonomy above is the diagnosis. This is what it is for. **Every comparison that produces
 a verdict carries these six fields, stated before the comparison runs.**
 
+**A prediction can be perfectly discriminating in principle and unfireable in practice. Only
+Power separates those.** Discrimination asks whether different outcomes give different
+conclusions; Power asks whether the data can tell those outcomes apart — and satisfying
+Discrimination is what makes a Power failure invisible.
+
 | field | the question |
 |---|---|
 | **Quantities** | What is on each side, **with units**? Are they the same kind of thing? |
 | **Membership** | Which set is being compared over? Is that set **fixed across the conditions**, or does it move with the treatment? |
 | **Reference** | Does the reference's **configuration match the run being scored** — same length, same K, same alpha, same partition, same unit set? |
 | **Discrimination** | **What input would change the answer?** A test no input can fail is not a test. **Extended to decisions:** any claim that an effect is large enough or small enough to matter requires a **computed magnitude**, not an assertion. |
-| **Power** | If the comparison samples, what is the **probability it fires when the defect is present**? |
+| **Power** | **What is the smallest effect this comparison can resolve at the available `n`, and is the predicted effect larger than it?** (Restated from a sampling-only form, which did not reach instances 12 and 13.) |
 | **Sentinels** | What **non-numeric values** can reach the comparison — `nan`, `None`, no-solution, truncated-by-timeout — and where are they bucketed? |
 
 ### Retro-validation: which field catches each instance
@@ -130,7 +136,15 @@ a verdict carries these six fields, stated before the comparison runs.**
 | 6 | Depth-3 reference under a depth-4 search | **Reference** — enumeration depth did not match search length |
 | 7 | Item 3 blocked on an uncomputed effect size | **Discrimination** (decision form) — no magnitude computed |
 
-**12 of 12 caught. All six fields fire at least once.**
+**13 of 13 caught. All six fields fire at least once.**
+
+Instance 13 is the **parent** of instance 12: P9's bands presupposed that 47.4% and 66.7%
+were distinguishable, and they are not at n = 19. The unsupported premise propagated into a
+registered prediction and survived three registrations and three joint reviews — the
+predictions were scrutinised, the premise was not, because it had stopped being the thing
+under test.
+
+Recording 12 and 13 as a lineage rather than two independent entries is itself the finding.
 
 Instance 12 fires on **Power**, and is instance 2 one level up: instance 2 was a *check* that
 sampled too few cases; instance 12 is a *prediction* never tested for resolvability at the
