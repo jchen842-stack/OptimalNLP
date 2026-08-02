@@ -8,7 +8,7 @@ SNLI token-level concepts, M = 24,199 tokens (2,000 sentences), `min_support = 5
 
 ---
 
-## The finding — `optimal.py:747` discards a final node on an under-estimate of its own value
+## The finding — `optimal.py:747` discards a final node without evaluating it
 
 At `:712-747`, `apply_distributive_property` transforms a node's label, the transformed form is
 re-estimated (`:718-719`, `node_after_distr`), and if `new_max < -e_node` and
@@ -21,25 +21,20 @@ We traced every qualifying discard in a run — a formula flagged FINAL
 and whose exact IoU exceeds the incumbent at that moment. **All 45 exit at `:747`.** The other
 four `continue` sites and the `recent_nodes` memory account for zero.
 
-**A FINAL node has nothing left to extend, so its reachable maximum is its exact IoU. On 41 of
-45 events the estimate is below that value:**
+**These are FINAL nodes** (`next_op == "INDIVIDUAL"`) — nothing left to extend, so the node's
+reachable maximum is just its own exact IoU, which is computable in one mask operation and is
+never computed.
 
-```
-      new_max    minimum_threshold    exact IoU of the discarded formula
-          0.0   0.23293365307753797         0.240215366
-          0.0   0.25056904400606983         0.254541051
-          0.0   0.12466358057917967         0.125174300
-   0.16014669...  0.1453263274336283         0.129822531
-   ...
-new_max <  exact IoU :  41 of 45
-new_max >= exact IoU :   4 of 45   (sound discards)
-```
+**We cannot tell you what the estimate was.** `new_max` is `0.0` on 41 of the 45, and `0.0` is
+a sentinel, not a value: `path_heuristic.py:48-50` computes `max_iou` and then returns `0.0,
+0.0` if it is below `minimum_threshold`, and `:172-174` returns `0.0, 0.0` when quantities were
+never computed. On the 4 events where `new_max` carries a real number, **it is above the
+discarded formula's exact IoU — i.e. sound.**
 
-**Several estimates are exactly `0.0` for formulas whose actual IoU is 0.24-0.25.**
-
-This holds **whether or not the distributive transform preserves equivalence.** If it does,
-both forms share that IoU and the estimate under-bounds its own formula. If it does not, an
-estimate for one formula was used to discard another.
+So the observation is narrower than "the bound is wrong": **the discard decision at `:747` is
+taken on a zeroed flag, and the underlying value is not recoverable at that site.** Whether it
+was a genuine below-threshold estimate or a never-computed default we do not know, and we did
+not add a hook inside `path_heuristic` to find out.
 
 ## Consequence 1 — usually harmless
 

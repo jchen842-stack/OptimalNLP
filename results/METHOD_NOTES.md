@@ -4679,3 +4679,81 @@ flat specific.** The event rate does not order configurations by harm on any nor
 five failed attributions, the exit path is measured at 45/45, and the estimate is measurably
 unsound on a final node — but the causal step from "unsound estimate discarded this formula"
 to "this is why the run's answer was worse" is one the data supports and does not compel.
+
+---
+
+# E1 IS VOID — `new_max == 0.0` is a SENTINEL, not an estimate
+
+2026-08-02. Fourth instance of the sentinel class, and it landed on the headline number.
+
+## The two zero-returning paths, verbatim
+
+```python
+# path_heuristic.py:48-50
+max_iou = max_intersection / min_union if min_union > 0 else 0.0
+if max_iou < minimum_threshold:
+    return 0.0, 0.0                      # computed, then DISCARDED and replaced by a flag
+
+# path_heuristic.py:172-174
+if label_quantities is None:
+    # Label discarded at the previous step
+    return 0.0, 0.0                      # never computed at all
+```
+
+The docstring of `update_paths_iou` states it outright: *"If the maximum IoU is below this
+threshold, both maximum and minimum IoU will be set to 0."*
+
+**`new_max == 0.0` means "below threshold" or "not computed". It is never an estimate of the
+formula's value.**
+
+## The split, measured
+
+```
+new_max EXACTLY 0.0 (sentinel, not an estimate)      41
+new_max nonzero AND <  exact_iou (real under-bound)   0
+new_max nonzero AND >= exact_iou (sound)              4
+
+informative rows: 4 of 45
+```
+
+**All 41 of the claimed under-bounds are the sentinel. There is not a single measured
+under-estimate.** The four rows carrying a real number are all `>= exact_iou` — **sound**.
+
+## What is retracted
+
+**E1 is void.** So is every sentence built on it:
+
+- *"the estimate is below the discarded formula's own exact IoU on 41 of 45"* — **withdrawn.**
+  The comparison was `sentinel < value`, which is not a comparison.
+- *"several estimates are exactly 0.0 for formulas whose actual IoU is 0.24-0.25"* —
+  **withdrawn.** That was the sentinel being read as a magnitude, and it was the headline.
+- *"defect established from data"* — **withdrawn.** Nothing is established. On the only rows
+  where an estimate is observable, the estimator is sound.
+
+**This is the third failed attribution of a cause for the 2/27 misses, and the sixth overall.**
+
+## What survives
+
+- **The exit path.** 45 of 45 filtered events exit at `optimal.py:747`, M3 at 0.0%. Measured
+  under four guards, unaffected by this.
+- **The event itself.** A complete, final-flagged formula, whose exact IoU exceeds the
+  incumbent, is popped and discarded without being evaluated — 45 times flat K=15, 76
+  per-sentence, 191 at K=50.
+- **The 2/27 misses**, and the two-instrument agreement on them.
+- **What the discard is made on:** at `:747` the decision rests on a value that is `0.0`
+  whenever the estimate fell below threshold. **Whether the underlying computed value was a
+  genuine below-threshold estimate (`:48-50`) or was never computed (`:172-174`) is NOT
+  DETERMINED**, and distinguishing them needs a hook inside `path_heuristic`, which is not
+  being added.
+
+## The shape
+
+The sentinel class has now produced four errors: `-1.0` IoU in a ratio-of-averages, `nan`
+scored as success, `nan` read as a definite miss, and this. **This one is the worst of the
+four**, because the sentinel value was not merely admitted into a computation — **it was quoted
+as the finding.** "An estimate of zero for a formula worth 0.25" is a vivid sentence, and it
+was vivid precisely because `0.0` was doing the work of a measurement while being a flag.
+
+The guard that would have caught it is the one already written: **assert numeric-and-finite,
+and bucket sentinels separately, before any comparison.** It was applied to `nan` and `None`
+and not to a plain float `0.0` — which is exactly the sentinel that does not look like one.

@@ -181,9 +181,16 @@ def main():
     for row in E_ROWS[:8]:
         nm, mt, ex, inc, nop = row
         print(f"    {nm!r:>12} {mt!r:>12} {ex:>12.9f} {inc!r:>12} {str(nop=='INDIVIDUAL'):>7}")
+    z = sum(1 for r in E_ROWS if r[0] == 0.0)
+    nz_under = sum(1 for r in E_ROWS if r[0] is not None and r[0] != 0.0 and r[0] < r[2] - 1e-15)
+    nz_ge = sum(1 for r in E_ROWS if r[0] is not None and r[0] != 0.0 and r[0] >= r[2] - 1e-15)
     print(f"\n    new_max <  exact_iou : {under} of {under+ge}")
     print(f"    new_max >= exact_iou : {ge} of {under+ge}")
-    print(f"    -> {'E1' if under > (under+ge)/2 else 'E2'}")
+    print(f"\n    SENTINEL SPLIT (path_heuristic.py:50 and :174 both `return 0.0, 0.0`)")
+    print(f"      new_max EXACTLY 0.0 (sentinel, not an estimate) : {z}")
+    print(f"      new_max nonzero AND < exact_iou (real under-bound): {nz_under}")
+    print(f"      new_max nonzero AND >= exact_iou (sound)          : {nz_ge}")
+    print(f"    -> informative rows = {nz_under + nz_ge} of {len(E_ROWS)}")
     print(f"\n    ordering of minimum_threshold vs incumbent (hypothesis, not required by the test):")
     print(f"      threshold <= incumbent : {chain['thr<=inc']}")
     print(f"      threshold >  incumbent : {chain['thr>inc']}")
