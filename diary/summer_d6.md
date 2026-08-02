@@ -36,6 +36,7 @@ verdict rather than an error.
 | 3 | **Expanded-count vs formula-space** | `K*(3K)^(L-1)` formula-space ratios (24.0x, 12.4x) | measured **wall-clock** ratios (83.2x, 36.6x) | the P1 "cancellation" finding, withdrawn |
 | 4 | **`nan` sentinel** | `true - x > tol` | `x` was `nan` / `None` / no-solution | 12 no-label runs scored as successes; 10 comparison sites still unguarded |
 | 5 | **Treatment-dependent median membership** | all-27 median | timed-out peaks are truncated, and membership moves with the treatment | corrected to a matched set before the L4 run (A1) |
+| 10 | **Two L4 sources, two extraction paths** | flat CSV stores integer counts | partition CSV stores `repr(float)` | logged pre-emptively; no discrepancy produced, but the rounded-`exact_IoU` version of this bit once (17/27 vs 2/27) |
 | 9 | **P3 read as a fix without a power check** | "both misses recovered, 0/27" | 0 of **9** vulnerable pairs; p ~ 0.10 under the flat rate | applying the Power field retroactively to a registration that predates the checklist |
 | 8 | **Exposure metric tracked one arbitrary prefix** | one representative prefix of the optimum | the optimum is a **set** of 1-3 prefixes | a "never entered frontier" pair lost nothing, which the 3-column shape could not express |
 | 7 | **Item 3 blocked on an uncomputed effect size** | asserted "order 7 drops, enough to move a between-arm comparison" | measured ~0.21% against a 64.7% gap | computed when the block was challenged |
@@ -127,7 +128,11 @@ a verdict carries these six fields, stated before the comparison runs.**
 | 6 | Depth-3 reference under a depth-4 search | **Reference** — enumeration depth did not match search length |
 | 7 | Item 3 blocked on an uncomputed effect size | **Discrimination** (decision form) — no magnitude computed |
 
-**9 of 9 caught. All six fields fire at least once.**
+**10 of 10 caught. All six fields fire at least once.**
+
+Instance 10 fires on **Reference**, and is the first logged *before* it caused an error —
+two data sources reached by two extraction paths, values agreeing, logged because the same
+structure already produced a 17/27-vs-2/27 error once.
 
 Instance 9 fires on **Power**, and is the clearest case of the checklist doing work
 retroactively: P3 was registered, run, reported and reviewed by both participants with no

@@ -5,7 +5,8 @@ Reads results/partition_L4.csv only. No searching.
 ## Flat (one-sample) length-4 baseline, pasted from results/beam_vs_exact_K15.csv
 
     27 pairs
-    timeouts/caps : 4   (unit510 a=0.1, unit87 a=0.05, unit396 a=0.2-untrained, unit510 a=0.05-untrained)
+    timeouts/caps : 4   (trained a=0.1 unit510, trained a=0.05 unit87, untrained a=0.05 unit396, untrained a=0.05 unit510)
+                    [CORRECTED 2026-08-01: the third was mis-named a=0.2; it is a=0.05. Count unchanged.]
     median peak_frontier : 17,714
     median time          : 718.6s
     max time             : 2,085.1s   (soft 1500s cap overshoot)

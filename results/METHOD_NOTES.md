@@ -2698,3 +2698,124 @@ Replaces the earlier "count the prefixes" wording, which implied enumeration.
 
 Offered alongside the two remedies, not instead of them: it tells a user which of their
 published results are at risk, using only what is already printed in their results table.
+
+---
+
+# ONE DESIGN CHOICE, TWO EFFECTS — linking the grammar restriction to n_prefixes
+
+`expand_node` grows a formula by exactly three moves, and the negation move is
+`And(label, Not(leaf))`. That single choice produces both effects recorded separately in this
+repo:
+
+**Effect 1 — expressiveness (already in the README and the grammar section).** Negation appears
+only as AND-NOT, so `OR NOT` is unconstructible and the leftmost term is never negated. At
+length 3 this costs nothing measurable; **at length 4 it costs +0.1586% IoU on untrained
+unit92**, where the unrestricted optimum
+`(tag=NN AND (dep=ROOT OR NOT const=VP)) OR dep=punct` is out of grammar.
+
+**Effect 2 — redundancy (this section).** Because the base of an AND-NOT chain is always
+positive, `a & ~b & ~c` has a **pinned** leftmost term: only `b` and `c` commute. An AND-NOT
+run of length `r` therefore yields `r` prefixes rather than `r + 1`. The same pinning that
+excludes formulas also **removes one construction path** from the formulas it does allow.
+
+So the design choice **narrows the search space and simultaneously reduces the redundancy of
+what remains in it** — the two effects point the same way, and both were measured
+independently before the link was noticed.
+
+---
+
+# WHAT REDUNDANCY ACTUALLY IS — and why it makes item 4 the dependent variable
+
+From the numbers already committed, with no new measurement:
+
+```
+pairs where EVERY optimal prefix was pruned : 4/27
+pairs that actually lost the optimum        : 2/27
+the 2 LOST  : n_prefixes = 1
+the 2 SAVED : n_prefixes = 2
+```
+
+**All four had every optimal prefix pruned. Two survived anyway.**
+
+So `n_prefixes` is **not protection from pruning** — pruning happened in all four cases. It is
+**the number of independent chances to be expanded before a prune fires.** A pair with two
+prefixes gets two draws on the pop order; a pair with one gets one.
+
+**Redundancy and ordering are the same mechanism counted two ways.** `n_prefixes` counts the
+draws; pop order decides each draw. That is why every opportunity-counting measure in this
+section has come apart from outcome — they count prunes, and a prune only costs something when
+it beats the expansion to the node.
+
+**This is the motivation for item 4.** The event-ordering metric — *was the prefix expanded
+before any copy of it was dropped* — is not an alternative framing of the exposure counts. It
+is the only one that measures the thing `n_prefixes` gives you draws on.
+
+---
+
+# C2 ONE-SIDED CHECK applied to the FLAT length-4 baseline
+
+Run now, so the two partitions are scored against the same reference by the same predicate
+when `partition_L4.csv` lands.
+
+```
+FLAT one-sample L4    DEFINITE MISS 0    INCONCLUSIVE 23    SENTINEL 4    total 27
+PER-SENTENCE L4       pending; the same function is applied on arrival
+```
+
+**Zero definite misses in the flat length-4 run.** That is a genuine result and a weak one:
+the check is one-sided, so 23 INCONCLUSIVE means "not caught", not "optimal". The four
+sentinels are the timeouts, bucketed rather than scored.
+
+### Correction to a committed baseline note
+
+The four flat length-4 timeouts are **trained a=0.1 unit510, trained a=0.05 unit87, untrained
+a=0.05 unit396, untrained a=0.05 unit510**. The P5 registration in
+`src/exp_partition_L4_score.py` named the third as `a=0.2`; it is `a=0.05`. **The count of 4 —
+which is what `FLAT_TIMEOUTS` and P5(a) depend on — is unchanged**, so no threshold moves. The
+docstring is corrected in place with the correction marked.
+
+### Instance 10 — the two sources are not read by identical code, and this is logged, not fixed silently
+
+The **scoring predicate is shared** — one `definite_miss()` function, one comparison, one
+tolerance, one sentinel bucket. But the **IoU extraction differs by necessity**: the flat CSV
+stores integer counts (`exact_n_inter`, `exact_n_fires`, `n_fire_neuron`) and full precision is
+reconstructed from them; `partition_L4.csv` stores the value directly as `repr(float)`.
+
+Both are full precision, and no discrepancy was produced here. It is logged anyway because it
+is **structurally the same risk that already bit once**: the first pass of the 27-pair oracle
+compared against the *rounded* `exact_IoU` column and reported 17/27 misses instead of 2/27.
+Same file, same column family, same class of error.
+
+Logged as **D6 instance 10, field = Reference** — *does the reference's configuration match
+the run being scored?* Two sources reached by two extraction paths is a Reference risk even
+when the values agree.
+
+---
+
+# D6 SCOPE BOUNDARY — drafted before the write-up
+
+**In D6:**
+
+- the soundness finding (aggregated estimate inadmissible when `Bott_1(E^C)_x != 0`)
+- partition-invariance of the aggregated estimate, and that repartitioning is not a fix
+- the measurement-defect class, the six-field checklist, and its retro/prospective validation
+- the `n_prefixes` mechanism, its structural derivation, and the 2/3 signature-space share
+- the upstream diagnostic and the two remedies with their costs
+- item 4's harm measurement, once it exists
+
+**Deferred to D7:**
+
+- the length-4 oracle (1,366,875 formulas x 27 pairs)
+- the fork-only rerun at `utils/optimal_utils.py:271`
+- queue items D / E / F
+- queue items 3 (50 units/arm), 4 (fixed work), 5 (alpha=0.005, beam-only)
+
+**Rationale: none of the deferred items changes what D6 concludes.** The length-4 oracle
+converts INCONCLUSIVE to confirmed-optimal — it can add misses but cannot unmake the
+inadmissibility, which is proved from the ceilings and `Bott_1` directly. The fork-only rerun
+replaces F2/F4, which are already recorded as uninterpretable and are load-bearing for nothing.
+D/E/F and items 3/4/5 are measurements *using* the method, downstream of whether it is sound.
+
+The one item that could change D6 is **P9** — if the mixed share of length-4 optima rises
+toward 67%, the exposure claim strengthens with length rather than holding constant. P9 is
+computable from the L4 optima alone and stays **in D6**.
