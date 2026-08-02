@@ -3318,3 +3318,81 @@ P7 would have been SUPPORTED on the quantity its own rationale described.
 entire purpose was to prevent that class of error, in a file that by then contained thirteen
 logged instances of it. Having the checklist did not make me apply it to the thing I was
 writing at the time.
+
+---
+
+# A3's MAGNITUDE FAILURE — the proposed cause is wrong, and the correct one is narrower
+
+The suggested cause was: *line 17 re-inserts on `UpdatedNode.max_iou > MinIoU`, not on the
+estimate having changed, so every surviving aggregate node bounces once under either
+partition.*
+
+**Checked against the control flow at `optimal.py:685-709` (pinned SHA), and it does not hold.**
+
+```python
+if node_heuristic != "sample":
+    new_max, _ = path_heuristic.update_paths_iou(heuristic_name="sample", ...)   # :687-698
+    if new_max < -e_node:                    # :699  <- TRIGGER: the estimate DECREASED
+        if new_max >= minimum_threshold:     # :701  <- inner guard, not the trigger
+            heapq.heappush(...,"sample")     # :702-707
+```
+
+The re-insert is gated **first** on `new_max < -e_node` — the refined estimate being strictly
+lower than the current one. `>= minimum_threshold` is the *inner* guard deciding whether the
+node is worth keeping, not the condition that fires the bounce. **A node whose refined estimate
+does not decrease is never re-inserted.**
+
+**The data refutes it independently.** If every surviving aggregate node bounced once,
+re-insertions would track distinct nodes expanded (~475) under both partitions. Observed:
+
+```
+                    re-insertions (median)   nodes expanded (median)   pushes (median)
+flat                        72                       477                  ~1,700   (~4% of pushes)
+per-sentence               622                       474                  ~2,140   (~29% of pushes)
+```
+
+**Most flat nodes never bounce** — 72 against 477 expanded. The claim requires ~475.
+
+**Correct cause, narrower:** re-insertion requires the *sample* estimate to come out strictly
+tighter than the *sum* estimate. At |D| = 1 that happens on roughly 4% of pushes; per-sample it
+happens on roughly 29%. Refinement is not a no-op at |D| = 1 — it simply finds a strictly
+tighter bound far less often, because per-sample minima can bind where a single pooled sample
+cannot. A3's error was reading "aggregated and sample coincide at |D| = 1" as "the refinement
+step does nothing", when the two estimators are different heuristic families and disagree even
+on one sample.
+
+## Named failure mode — asserting code behaviour from a name, an expression, or an intent
+
+Recorded separately from the numbered instances, because **the remedy is not a checklist
+field.** No comparison precondition would have caught any of these. The remedy is: **read the
+control flow.**
+
+**Four occurrences this session, all mine:**
+
+1. **`can_improve_or_iou_disjoint_case` as root cause** — asserted from the function's name and
+   its comment, without checking what the branch computed or whether it was reachable.
+   Falsified by F1.
+2. **C2, voiding the `in_grammar_max` column** — asserted `max_length` was an exact length
+   without reading `:566` / `:575`. It is a maximum; the column was a working one-sided
+   detector I nearly discarded.
+3. **`exp_noprune` substitution 3b** — disabled upstream's `ValueError` on the assumption the
+   invariant "no longer applies", without checking whether it was load-bearing. It was; the
+   build left the length-3 space and the experiment was void.
+4. **A3** — asserted refine-on-pop was a no-op at |D| = 1 from what aggregation *means*, not
+   from the guard at `:699`.
+
+**The pattern:** in each case a plausible reading of a name, an expression, or a design intent
+was substituted for the branch condition actually controlling execution, and in each case the
+code was available and short. Three of the four were caught only when a measurement disagreed.
+
+**This session's fifth occurrence is the one above** — the proposed line-17 cause — which is
+not mine, and which I record only to note that the failure mode is not personal to me and that
+checking it cost one `sed` of 25 lines.
+
+## Decomposition of the 8.6x — one sentence, not scheduled
+
+There are **two** re-insertion sites both tagged `"sample"` — the estimate-decrease path at
+`:702-707` and the distributive-property path at `:753-758` — and the counter did not separate
+them, so which one carries the excess is **unmeasured**; the trigger `new_max < -e_node` fires
+on ~4% of flat pushes against ~29% per-sample, which is sufficient to produce the 8.6x without
+invoking the second site at all.

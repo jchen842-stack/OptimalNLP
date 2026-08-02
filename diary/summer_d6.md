@@ -199,3 +199,36 @@ complete. The fields were written by reading the failures backwards.
 fields are exhaustive. The commitment is the process one: when an eighth instance appears and
 none of the six fields catches it, **the gap is recorded as a seventh field rather than forced
 into an existing one.** That is the only way this stays a test instead of becoming a ritual.
+
+---
+
+## CONCLUSION — what the checklist is actually evidence for
+
+**The file above reads stronger than the evidence supports. Corrected here.**
+
+All fifteen instances were caught. **None was caught by its author at the time of writing.**
+
+The three most recent are the clearest test, because by then the log was open, maintained, and
+being actively cited:
+
+- **Instance 7** — a decision blocked on an uncomputed effect size, while the file already
+  documented six instances of exactly that shape.
+- **Instance 13** — an unsupported bias claim asserted with no resolvable-effect check, then
+  used as the premise for a registered prediction.
+- **Instance 15** — a registration written against the wrong dependent variable, *inside a
+  registration whose stated purpose was preventing that class of error*.
+
+**The supportable claim is narrow:**
+
+> **The checklist catches defects on review. It does not catch them on authorship.**
+
+Every instance was found by a later measurement disagreeing, or by someone applying the fields
+to work already committed. Not one was prevented at the moment of writing, including by an
+author who had the list open. A checklist is a review instrument; treating it as a prophylactic
+is the same error as treating `11/11` as evidence of correctness.
+
+There is also a class it cannot reach at all: **asserting code behaviour from a name, an
+expression, or an intent rather than from the control flow** (four occurrences this session,
+recorded in `results/METHOD_NOTES.md`). No comparison precondition addresses it. The remedy is
+to read the flow, and it is cheap — the four cost between five and twenty-five lines of source
+each to settle.
