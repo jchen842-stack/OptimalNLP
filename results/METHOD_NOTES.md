@@ -3124,3 +3124,127 @@ Instance 2 still fires under the sampled reading; 12 and 13 fire only under the 
    `results/UPSTREAM_MESSAGE_DRAFT.md`, written, unsent, push held.
 
 Nothing else is opened.
+
+---
+
+# LENGTH-4 PER-SENTENCE PARTITION — RESULTS
+
+2026-08-02. `results/partition_L4.csv`, `results/partition_L4_VERDICTS.txt`. All 27 pairs
+completed, so **C1's stop rule did not fire** and medians are claimable.
+
+## V0 CONTROL — PASS, and it says more than it did at length 3
+
+```
+comparable pairs (terminated in BOTH) : 23
+  same IoU : 23        HIGHER : 0        LOWER : 0
+P6 bucket (timeout on one side)        : 4
+```
+
+`LOWER = 0`, so the repartition is correct and everything below is readable.
+
+**But `HIGHER = 0` is itself a result.** At length 3 the partition produced 2 HIGHER — the two
+recovered misses. **At length 4 not a single pair's IoU changed.** The partition altered no
+answer at this length.
+
+## P5 — SUPPORTED via (a) only, and the two disjuncts point in opposite directions
+
+```
+(a) timeouts/caps  4 -> 1  (only trained a=0.05 unit87 still halts)      YES
+(b) matched median peak  15,593 -> 21,687  = 1.391x                       NO  (needed < 7,796)
+```
+
+## P7 — NOT SUPPORTED. B1 band: THE FRONTIER ENLARGED
+
+```
+matched n = 23
+ratio-of-medians   21,687 / 15,593 = 1.391x
+median-of-ratios                     1.222x
+per-pair ratio     min 1.068   median 1.222   max 1.704
+```
+
+**Both statistics exceed 1.2, so the band verdict is robust to the choice** — recorded
+explicitly because ratio-of-medians vs median-of-ratios has already diverged once in this file
+(the K15/K8 discount, 54.2x vs 36.6x). Here they agree on the band and differ on the magnitude,
+so the band is claimed and the magnitude is reported as a range.
+
+**B1 verdict: `ratio >= 1.2` -> THE PARTITION ENLARGED THE FRONTIER.** Neither P5(b) nor P7 is
+claimed. The frontier is **22% to 39% larger** under the correct partition, on **every one of
+the 23 matched pairs** (minimum ratio 1.068 — not a single pair shrank).
+
+## A2's separation gave a case I did not register
+
+```
+matched median expanded :  8,340 -> 8,553   = 1.03x
+matched median time     :  639.4s -> 247.2s = 0.39x
+matched median peak     : 15,593 -> 21,687  = 1.39x
+```
+
+The two registered readings were *"expanded down + time up -> bounds tightened"* and
+*"expanded flat + time up -> no tightening, cost is pure arithmetic"*. **Neither describes
+this.** Observed: **expanded flat (1.03x), peak up (1.39x), time DOWN (0.39x)**.
+
+**A2's premise is empirically false here.** It reasoned from the paper's Section C that sample
+computation costs ~|D|x more arithmetic per estimate, with |D| going 1 -> ~2,000, and predicted
+the per-sentence run would be *slower*. It is **2.6x faster**. Same search work (expanded
+1.03x), larger frontier, much less wall clock — the per-element arithmetic got cheaper under
+partitioning, not dearer. Nothing here diagnoses why; likely candidates are vectorisation over
+a 2,000 x 53 grid versus one 24,199-element vector, but that is unmeasured and not claimed.
+
+**The timeout improvement is fully explained by the speedup, not by any bound tightening.**
+Timeouts are wall-clock, the wall clock fell 2.6x, and three pairs crossed back under the cap.
+
+## What this does to D5.0 — and a defect in my own scorer
+
+`src/exp_partition_L4_score.py` printed *"D5.0's founding frontier-explosion observation is
+substantially a SAMPLE-REPRESENTATION ARTIFACT. Append a superseding diary entry."* **That
+output is wrong and is retracted.** It fires off `if a or b`, i.e. off P5 being supported at
+all, and P5 was supported only by disjunct (a).
+
+**D5.0's founding observation was about FRONTIER EXPLOSION. The frontier did not shrink — it
+grew, on every matched pair.** So:
+
+> **The frontier explosion is NOT a sample-representation artifact. It is 22-39% WORSE under
+> the paper's own sample definition.** What was a sample-representation artifact is the
+> *wall-clock* wall: 3 of 4 timeouts were an artifact of per-element arithmetic cost, not of
+> search-space growth.
+
+**D5.0 stands on its founding observation and is not superseded.** A superseding entry is
+**not** written. What is appended instead is the narrower correction: the timeout counts in the
+D5 series measured arithmetic cost as much as combinatorics, and the frontier numbers — which
+were the actual claim — hold and understate.
+
+## C2 one-sided check, with Power and Membership attached
+
+```
+PER-SENTENCE L4 :  DEFINITE MISS 0    INCONCLUSIVE 26    SENTINEL 1  (unit87, timeout)
+FLAT L4         :  DEFINITE MISS 0    INCONCLUSIVE 23    SENTINEL 4
+```
+
+**Power:** margin `m` over the 26 scoreable pairs — min 0.101%, **median 2.765%**, max 11.709%.
+A 4.74%-scale loss would be caught on 18 of 26; a **0.93%-scale loss on only 5 of 26**.
+**Membership:** the statement covers the 26 that terminated; `unit87` is excluded and is the
+hardest pair in both runs.
+
+**So: no large in-grammar loss detected at length 4 in either partition, and the check is
+near-blind to small ones.** It must not be reported as "length 4 is optimal".
+
+### Correction issued during this session
+
+On first reading the run log I said one pair showed `part_L4 < true_L3` and called it a
+definite miss. **It is not.** The script's internal `V0` line counts `nan` as "not reaching",
+and that pair is `unit87` — a timeout with no returned label. Sentinel, not miss. This is the
+**fourth** appearance of a non-numeric value being read as a result in this project, and the
+first since the standing rule was written; the rule was applied one step later than it should
+have been, at the reporting boundary rather than the reading boundary.
+
+## D6 instance 14 — a registered consequence attached to a disjunction
+
+**Field: Discrimination.** P5 was registered as `(a) OR (b)`, with a **single** diary
+consequence attached to the disjunction: *if P5 holds, D5.0 is superseded*. The two disjuncts
+measure different things — (a) wall clock, (b) frontier size — and they fired in **opposite
+directions**. The registered consequence could not express that, so the scorer emitted a
+verdict about D5.0 that the data contradicts.
+
+The Discrimination field asks *what input would change the answer*. It was satisfied for P5's
+own verdict and **not** for the consequence hung off it. **A consequence attached to a
+disjunction needs its own Discrimination check, one per disjunct.**

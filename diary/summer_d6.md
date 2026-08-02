@@ -36,6 +36,7 @@ verdict rather than an error.
 | 3 | **Expanded-count vs formula-space** | `K*(3K)^(L-1)` formula-space ratios (24.0x, 12.4x) | measured **wall-clock** ratios (83.2x, 36.6x) | the P1 "cancellation" finding, withdrawn |
 | 4 | **`nan` sentinel** | `true - x > tol` | `x` was `nan` / `None` / no-solution | 12 no-label runs scored as successes; 10 comparison sites still unguarded |
 | 5 | **Treatment-dependent median membership** | all-27 median | timed-out peaks are truncated, and membership moves with the treatment | corrected to a matched set before the L4 run (A1) |
+| 14 | **One diary consequence hung off a disjunction** | P5 = (a) OR (b), consequence "D5.0 superseded" | (a) and (b) fired in **opposite directions**; the scorer emitted a verdict the data contradicts | L4 landed and the frontier had *grown* while timeouts fell |
 | 13 | **"optima biased toward protected signatures"** (assistant) | 47.4% observed | 66.7% space share; Wilson CI on 9/19 is [27.3%, 68.3%] and **contains** it | computed when instance 12 forced a power check one level up. **Parent of instance 12.** |
 | 12 | **P9 registered without checking it could fire** | bands separated by 9.0 points | SE 9.7 points at n=26; n~236 needed for 80% power | computed when the baseline correction forced a re-registration |
 | 11 | **P9 scored a different subject than it named** | named: length-4 **optima** | scored: **returned formulas**, whose correctness is the open question | caught on review before the L4 file existed; circular as registered |
@@ -136,7 +137,11 @@ Discrimination is what makes a Power failure invisible.
 | 6 | Depth-3 reference under a depth-4 search | **Reference** — enumeration depth did not match search length |
 | 7 | Item 3 blocked on an uncomputed effect size | **Discrimination** (decision form) — no magnitude computed |
 
-**13 of 13 caught. All six fields fire at least once.**
+**14 of 14 caught. All six fields fire at least once.**
+
+Instance 14 fires on **Discrimination**: the field was satisfied for P5's own verdict but
+never applied to the *consequence* hung off it. A consequence attached to a disjunction needs
+its own Discrimination check, one per disjunct.
 
 Instance 13 is the **parent** of instance 12: P9's bands presupposed that 47.4% and 66.7%
 were distinguishable, and they are not at n = 19. The unsupported premise propagated into a

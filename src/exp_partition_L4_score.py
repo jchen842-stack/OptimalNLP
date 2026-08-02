@@ -136,8 +136,6 @@ def main():
     return 0
 
 
-if __name__ == "__main__":
-    raise SystemExit(main())
 
 # =====================================================================================
 # ADDENDA — registered 2026-08-01 while the L4 run was still in flight, before
@@ -467,3 +465,7 @@ def report_partial(part):
     print("  Stopping partway selects the fast pairs, compounding with the matched-set")
     print("  selection A1 corrected for -- two selection effects in the same direction.")
     return True
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
